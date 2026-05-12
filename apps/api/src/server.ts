@@ -14,9 +14,14 @@ const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
 })
 
-// Plugins
 app.register(cors, {
-  origin: 'http://localhost:3000',
+  origin: (origin, cb) => {
+    if (!origin || origin.endsWith('.railway.app') || origin.includes('localhost')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Not allowed by CORS'), false)
+    }
+  },
   credentials: true
 })
 app.register(prismaPlugin)
@@ -25,12 +30,10 @@ app.register(jwt, {
   secret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
 })
 
-// Routes
 app.register(authRoutes, { prefix: '/api/v1/auth' })
 app.register(lessonRoutes, { prefix: '/api/v1/lessons' })
 app.register(progressRoutes, { prefix: '/api/v1/lessons' })
 
-// Health check
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() }
 })
