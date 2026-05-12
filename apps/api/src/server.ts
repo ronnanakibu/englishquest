@@ -1,0 +1,49 @@
+import Fastify from 'fastify'
+import cookie from '@fastify/cookie'
+import jwt from '@fastify/jwt'
+import cors from '@fastify/cors'
+import { config } from 'dotenv'
+import prismaPlugin from './plugins/prisma.plugin'
+import authRoutes from './modules/auth/auth.route'
+import lessonRoutes from './modules/lesson/lesson.route'
+import progressRoutes from './modules/progress/progress.route'
+
+config()
+
+const app = Fastify({
+  logger: process.env.NODE_ENV !== 'production'
+})
+
+// Plugins
+app.register(cors, {
+  origin: 'http://localhost:3000',
+  credentials: true
+})
+app.register(prismaPlugin)
+app.register(cookie)
+app.register(jwt, {
+  secret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
+})
+
+// Routes
+app.register(authRoutes, { prefix: '/api/v1/auth' })
+app.register(lessonRoutes, { prefix: '/api/v1/lessons' })
+app.register(progressRoutes, { prefix: '/api/v1/lessons' })
+
+// Health check
+app.get('/health', async () => {
+  return { status: 'ok', timestamp: new Date().toISOString() }
+})
+
+const start = async () => {
+  try {
+    const port = Number(process.env.API_PORT) || 3001
+    await app.listen({ port, host: '0.0.0.0' })
+    console.log(`🚀 API running at http://localhost:${port}`)
+  } catch (err) {
+    app.log.error(err)
+    process.exit(1)
+  }
+}
+
+start()

@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum LessonCategory {
+  VOCABULARY
+  GRAMMAR
+  LISTENING
+  READING
+  SPEAKING
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  FILL_BLANK
+  REARRANGE
+  TRANSLATE
+  LISTEN_ANSWER
+  ERROR_DETECT
+  FLASHCARD
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum XPSource {
+  LESSON_COMPLETE
+  PERFECT_SCORE
+  STREAK_BONUS
+  DAILY_CHALLENGE
+  ACHIEVEMENT
+  COMBO_BONUS
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  username        String    @unique
+  passwordHash    String
+  role            Role      @default(STUDENT)
+  emailVerified   Boolean   @default(false)
+  verifyToken     String?
+  resetToken      String?
+  resetExpiry     DateTime?
+  refreshToken    String?   @db.Text
+
+  xp              Int       @default(0)
+  level           Int       @default(1)
+  hearts          Int       @default(5)
+  maxHearts       Int       @default(5)
+  lastHeartRefill DateTime  @default(now())
+
+  currentStreak   Int       @default(0)
+  longestStreak   Int       @default(0)
+  lastActiveDate  DateTime?
+  streakFreezes   Int       @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  progress        UserProgress[]
+  achievements    UserAchievement[]
+  xpLogs          XPLog[]
+  streakLogs      StreakLog[]
+  dailyChallenges UserDailyChallenge[]
+  vocabProgress   VocabProgress[]
+
+  @@index([xp])
+  @@index([level])
+}
+
+model Lesson {
+  id          String         @id @default(cuid())
+  title       String
+  description String         @db.Text
+  category    LessonCategory
+  difficulty  Difficulty
+  order       Int
+  xpReward    Int            @default(20)
+  unlockLevel Int            @default(1)
+  audioUrl    String?
+  isPublished Boolean        @default(false)
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  questions   Question[]
+  progress    UserProgress[]
+  challenges  DailyChallenge[]
+
+  @@index([difficulty, isPublished])
+  @@index([unlockLevel])
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  lessonId      String
+  type          QuestionType
+  prompt        String       @db.Text
+  audioUrl      String?
+  imageUrl      String?
+  options       Json?
+  correctAnswer String       @db.Text
+  explanation   String?      @db.Text
+  order         Int
+  difficulty    Int          @default(1)
+
+  lesson        Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  answers       UserAnswer[]
+
+  @@index([lessonId])
+}
+
+model UserProgress {
+  id          String         @id @default(cuid())
+  userId      String
+  lessonId    String
+  status      ProgressStatus @default(NOT_STARTED)
+  score       Int            @default(0)
+  xpEarned    Int            @default(0)
+  completedAt DateTime?
+  attempts    Int            @default(0)
+  bestScore   Int            @default(0)
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  answers     UserAnswer[]
+
+  @@unique([userId, lessonId])
+  @@index([userId, status])
+}
+
+model UserAnswer {
+  id         String       @id @default(cuid())
+  progressId String
+  questionId String
+  userAnswer String       @db.Text
+  isCorrect  Boolean
+  timeSpent  Int
+  createdAt  DateTime     @default(now())
+
+  progress   UserProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId, isCorrect])
+}
+
+model XPLog {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  source    XPSource
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model StreakLog {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime @db.Date
+  maintained Boolean  @default(true)
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model Achievement {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  title       String
+  description String  @db.Text
+  iconUrl     String?
+  xpReward    Int     @default(50)
+  isHidden    Boolean @default(false)
+  condition   Json
+
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model DailyChallenge {
+  id       String   @id @default(cuid())
+  date     DateTime @db.Date
+  lessonId String
+  xpBonus  Int      @default(50)
+
+  lesson   Lesson   @relation(fields: [lessonId], references: [id])
+  users    UserDailyChallenge[]
+
+  @@unique([date])
+  @@index([date])
+}
+
+model UserDailyChallenge {
+  id          String         @id @default(cuid())
+  userId      String
+  challengeId String
+  completedAt DateTime       @default(now())
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   DailyChallenge @relation(fields: [challengeId], references: [id])
+
+  @@unique([userId, challengeId])
+}
+
+model VocabProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  word         String
+  correctCount Int      @default(0)
+  wrongCount   Int      @default(0)
+  nextReview   DateTime @default(now())
+  interval     Int      @default(1)
+  easeFactor   Float    @default(2.5)
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@index([userId, nextReview])
+}
+
+model LeaderboardCache {
+  id        String   @id @default(cuid())
+  userId    String
+  username  String
+  xp        Int
+  level     Int
+  period    String
+  rank      Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, period])
+  @@index([period, xp])
+}
