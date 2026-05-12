@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "pnpm run db:generate && tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server.js",
     "db:migrate": "npx prisma migrate dev --schema=apps/api/prisma/schema.prisma",
     "db:generate": "npx prisma generate --schema=apps/api/prisma/schema.prisma",
     "db:seed": "tsx apps/api/prisma/seed.ts",
     "db:studio": "npx prisma studio --schema=apps/api/prisma/schema.prisma"
+    
   },
   "dependencies": {
     "axios": "^1.16.0",
