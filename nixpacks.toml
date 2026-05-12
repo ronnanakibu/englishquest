@@ -1,5 +1,5 @@
 [phases.install]
-cmds = ["npm install -g pnpm", "cd apps/api && pnpm install"]
+cmds = ["npm install -g pnpm", "cd apps/api && pnpm install --no-frozen-lockfile"]
 
 [phases.build]
 cmds = ["cd apps/api && npx prisma generate && pnpm run build"]
