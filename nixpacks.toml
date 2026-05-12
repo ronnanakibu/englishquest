@@ -1,8 +1,11 @@
+[variables]
+NEXT_PUBLIC_API_URL = "https://api-api-3390.up.railway.app"
+
 [phases.install]
 cmds = ["npm install -g pnpm", "cd apps/api && pnpm install --no-frozen-lockfile"]
 
 [phases.build]
-cmds = ["cd apps/api && npx prisma generate && pnpm run build"]
+cmds = ["cd apps/web && pnpm install && pnpm run build"]
 
 [start]
-cmd = "cd apps/api && node dist/server.js"
+cmd = "cd apps/web && pnpm run start"
