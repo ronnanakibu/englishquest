@@ -5,10 +5,16 @@ NEXT_PUBLIC_API_URL = "https://api-api-3390.up.railway.app"
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install -g pnpm", "cd apps/api && pnpm install --no-frozen-lockfile"]
+cmds = [
+  "npm install -g pnpm",
+  "cd apps/api && pnpm install --no-frozen-lockfile"
+]
 
 [phases.build]
-cmds = ["cd apps/web && pnpm install && pnpm run build"]
+cmds = [
+  "npm install -g pnpm",
+  "cd apps/web && pnpm install && pnpm run build"
+]
 
 [start]
-cmd = "cd apps/web && pnpm run start"
+cmd = "cd apps/web && node_modules/.bin/next start"
