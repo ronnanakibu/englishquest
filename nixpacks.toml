@@ -1,16 +1,8 @@
-[phases.setup]
-# Ini maksa Railway buat nginstal Node.js dan pnpm ke dalam mesinnya
-nixPkgs = ['nodejs', 'pnpm']
-
 [phases.install]
-# Perintah instalasi bebas hambatan lockfile
-cmds = ['pnpm install --no-frozen-lockfile']
+cmds = ["npm install -g pnpm", "cd apps/api && pnpm install"]
 
 [phases.build]
-# Perintah build untuk workspace web
-cmds = ['pnpm --filter web build']
+cmds = ["cd apps/api && npx prisma generate && pnpm run build"]
 
 [start]
-# Pastikan ini mengarah ke file hasil build Next.js atau API kamu nantinya
-# Kalau untuk web Next.js biasanya:
-cmd = 'pnpm --filter web start'
+cmd = "cd apps/api && node dist/server.js"
