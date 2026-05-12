@@ -1,6 +1,9 @@
 [variables]
 NEXT_PUBLIC_API_URL = "https://api-api-3390.up.railway.app"
 
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
 [phases.install]
 cmds = ["npm install -g pnpm", "cd apps/api && pnpm install --no-frozen-lockfile"]
 
