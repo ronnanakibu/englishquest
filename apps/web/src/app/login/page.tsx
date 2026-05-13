@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { useLangStore } from '@/stores/langStore'
+import { t } from '@/lib/i18n'
+import Navbar from '@/components/Navbar'
 
 export default function LoginPage() {
   const router = useRouter()
   const { login, isLoading } = useAuthStore()
+  const { lang } = useLangStore()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
 
@@ -19,86 +23,150 @@ export default function LoginPage() {
       await login(form.email, form.password)
       router.push('/learn')
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login gagal')
+      setError(err.response?.data?.error || t(lang, 'loginFailed'))
     }
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <motion.div
-          className="text-center mb-8"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Link href="/" className="inline-flex items-center gap-2 justify-center">
-            <span className="text-3xl">🌍</span>
-            <span className="text-xl font-black text-green-600">EnglishQuest</span>
-          </Link>
-        </motion.div>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Navbar variant="landing" />
 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 'calc(100vh - 60px)',
+        padding: '24px',
+      }}>
         <motion.div
-          className="bg-white rounded-3xl shadow-xl shadow-gray-100 p-8 border border-gray-100"
-          initial={{ opacity: 0, y: 20 }}
+          style={{
+            width: '100%',
+            maxWidth: '400px',
+            background: 'var(--bg-card)',
+            border: '1.5px solid var(--border)',
+            borderRadius: '24px',
+            padding: '40px',
+            boxShadow: 'var(--shadow-lg)',
+          }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
         >
-          <div className="text-center mb-7">
-            <div className="text-5xl mb-3">👋</div>
-            <h1 className="text-2xl font-black text-gray-800">Selamat Datang!</h1>
-            <p className="text-gray-400 text-sm mt-1">Login untuk lanjut belajar</p>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>👋</div>
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '24px',
+              fontWeight: 700,
+              color: 'var(--text)',
+              letterSpacing: '-0.5px',
+            }}>
+              {t(lang, 'welcomeBack')}
+            </h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
+              {t(lang, 'loginSubtitle')}
+            </p>
           </div>
 
           {error && (
             <motion.div
-              className="bg-red-50 border border-red-200 text-red-600 rounded-2xl px-4 py-3 text-sm mb-5 text-center font-semibold"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
+              style={{
+                background: 'var(--red-light)',
+                border: '1px solid var(--red)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                color: 'var(--red)',
+                fontWeight: 600,
+                marginBottom: '20px',
+                textAlign: 'center',
+              }}
             >
               {error}
             </motion.div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5 block">Email</label>
-              <input
-                type="email"
-                placeholder="email@example.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl px-4 py-3.5 text-sm font-semibold focus:outline-none focus:border-green-400 focus:bg-white transition-all"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-black text-gray-500 uppercase tracking-wide mb-1.5 block">Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl px-4 py-3.5 text-sm font-semibold focus:outline-none focus:border-green-400 focus:bg-white transition-all"
-                required
-              />
-            </div>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[
+              { label: t(lang, 'email'), key: 'email', type: 'email', placeholder: 'email@example.com' },
+              { label: t(lang, 'password'), key: 'password', type: 'password', placeholder: '••••••••' },
+            ].map(({ label, key, type, placeholder }) => (
+              <div key={key}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '1px',
+                  textTransform: 'uppercase',
+                  marginBottom: '6px',
+                  fontFamily: 'var(--font-display)',
+                }}>
+                  {label}
+                </label>
+                <input
+                  type={type}
+                  placeholder={placeholder}
+                  value={(form as any)[key]}
+                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    border: '1.5px solid var(--border)',
+                    background: 'var(--bg-subtle)',
+                    color: 'var(--text)',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    fontFamily: 'var(--font-body)',
+                    outline: 'none',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--green)'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                />
+              </div>
+            ))}
 
             <motion.button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-black py-3.5 rounded-2xl transition-all shadow-md shadow-green-100 mt-2"
-              whileTap={{ scale: 0.97 }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: isLoading ? 'var(--bg-subtle)' : 'var(--green)',
+                color: isLoading ? 'var(--text-muted)' : 'white',
+                fontWeight: 800,
+                fontSize: '15px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                fontFamily: 'var(--font-display)',
+                marginTop: '4px',
+                boxShadow: isLoading ? 'none' : 'var(--shadow-green)',
+                letterSpacing: '-0.2px',
+              }}
+              whileTap={{ scale: 0.98 }}
             >
-              {isLoading ? '⏳ Loading...' : 'Log In'}
+              {isLoading ? '⏳ Loading...' : t(lang, 'loginBtn')}
             </motion.button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-6">
-            Belum punya akun?{' '}
-            <Link href="/register" className="text-green-500 font-black hover:underline">
-              Daftar Gratis
+          <p style={{
+            textAlign: 'center',
+            fontSize: '14px',
+            color: 'var(--text-muted)',
+            marginTop: '24px',
+          }}>
+            {t(lang, 'noAccount')}{' '}
+            <Link href="/register" style={{
+              color: 'var(--green)',
+              fontWeight: 800,
+              textDecoration: 'none',
+            }}>
+              {t(lang, 'registerLink')}
             </Link>
           </p>
         </motion.div>

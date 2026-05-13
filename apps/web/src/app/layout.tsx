@@ -1,27 +1,19 @@
 import type { Metadata } from 'next'
-import { Nunito } from 'next/font/google'
 import './globals.css'
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800', '900'],
-  variable: '--font-nunito'
-})
+import ThemeProvider from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: 'EnglishQuest — Belajar Bahasa Inggris',
   description: 'Platform gamifikasi belajar bahasa Inggris interaktif',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${nunito.variable} font-nunito`}>
-        {children}
+    <html lang="id">
+      <body>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

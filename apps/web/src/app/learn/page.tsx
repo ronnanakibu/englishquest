@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { useLangStore } from '@/stores/langStore'
+import { t } from '@/lib/i18n'
+import Navbar from '@/components/Navbar'
 import api from '@/lib/api'
 
 interface Lesson {
@@ -20,6 +23,7 @@ interface Lesson {
 export default function LearnPage() {
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const { lang } = useLangStore()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -45,124 +49,256 @@ export default function LearnPage() {
   }
 
   const getCategoryEmoji = (cat: string) => ({ VOCABULARY: '📚', GRAMMAR: '✏️', LISTENING: '🎧', READING: '📖', SPEAKING: '🎤' }[cat] || '📚')
-  const getDifficultyStyle = (d: string) => ({ BEGINNER: 'text-green-600 bg-green-100', INTERMEDIATE: 'text-yellow-600 bg-yellow-100', ADVANCED: 'text-red-600 bg-red-100' }[d] || 'text-gray-600 bg-gray-100')
+
+  const getDifficultyStyle = (d: string) => ({
+    BEGINNER: { color: 'var(--green)', bg: 'var(--green-light)' },
+    INTERMEDIATE: { color: 'var(--yellow)', bg: 'var(--yellow-light)' },
+    ADVANCED: { color: 'var(--red)', bg: 'var(--red-light)' },
+  }[d] || { color: 'var(--text-muted)', bg: 'var(--bg-subtle)' })
 
   const xpForNextLevel = (level: number) => Math.floor(100 * Math.pow(level, 2))
   const xpProgress = user ? Math.min(((user.xp % xpForNextLevel(user.level)) / xpForNextLevel(user.level)) * 100, 100) : 0
-
   const completedCount = lessons.filter(l => l.progress?.status === 'COMPLETED').length
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white">
-        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="text-6xl">🌍</motion.div>
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ repeat: Infinity, duration: 1 }}
+          style={{ fontSize: '60px' }}
+        >
+          🌍
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b-2 border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🌍</span>
-            <span className="font-black text-green-600 text-lg">EnglishQuest</span>
-          </div>
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-full">
-              <span>🔥</span>
-              <span className="font-black text-sm text-orange-600">{user?.currentStreak}</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-yellow-50 px-3 py-1.5 rounded-full">
-              <span>⚡</span>
-              <span className="font-black text-sm text-yellow-600">{user?.xp} XP</span>
-            </div>
-            <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1.5 rounded-full">
-              <span>❤️</span>
-              <span className="font-black text-sm text-red-500">{user?.hearts}</span>
-            </div>
-            <button onClick={handleLogout} className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors">
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Navbar
+        variant="app"
+        stats={{ streak: user?.currentStreak || 0, xp: user?.xp || 0, hearts: user?.hearts || 0 }}
+        onLogout={handleLogout}
+      />
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Welcome + Level */}
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
+        
+        {/* Welcome Card */}
         <motion.div
-          className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl p-6 text-white shadow-lg shadow-green-200"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          style={{
+            background: 'linear-gradient(135deg, var(--green) 0%, #16A34A 100%)',
+            borderRadius: '24px',
+            padding: '32px',
+            marginBottom: '32px',
+            boxShadow: 'var(--shadow-green)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
         >
-          <div className="flex items-center justify-between mb-4">
+          {/* Decorative circle */}
+          <div style={{
+            position: 'absolute',
+            right: '-20px',
+            top: '-20px',
+            width: '140px',
+            height: '140px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.08)',
+          }} />
+          <div style={{
+            position: 'absolute',
+            right: '60px',
+            bottom: '-30px',
+            width: '100px',
+            height: '100px',
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+          }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', position: 'relative' }}>
             <div>
-              <h1 className="text-2xl font-black">Halo, {user?.username}! 👋</h1>
-              <p className="text-green-100 text-sm mt-0.5">Level {user?.level} · {completedCount} lesson selesai</p>
+              <h1 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '26px',
+                fontWeight: 700,
+                color: 'white',
+                letterSpacing: '-0.5px',
+                marginBottom: '4px',
+              }}>
+                {t(lang, 'greeting')}, {user?.username}! 👋
+              </h1>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '14px' }}>
+                Level {user?.level} · {completedCount} {t(lang, 'levelInfo')}
+              </p>
             </div>
-            <div className="bg-white/20 rounded-2xl px-4 py-2 text-center">
-              <div className="text-2xl font-black">{user?.level}</div>
-              <div className="text-xs text-green-100">Level</div>
+            <div style={{
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '16px',
+              padding: '12px 16px',
+              textAlign: 'center',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>
+                {user?.level}
+              </div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', fontWeight: 700, letterSpacing: '0.5px' }}>
+                LEVEL
+              </div>
             </div>
           </div>
+
           {/* XP Bar */}
-          <div>
-            <div className="flex justify-between text-xs text-green-100 mb-1.5 font-semibold">
-              <span>{user?.xp} XP</span>
-              <span>Next: {xpForNextLevel(user?.level || 1)} XP</span>
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', fontWeight: 700 }}>
+                {user?.xp} XP
+              </span>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                {t(lang, 'nextLevel')}: {xpForNextLevel(user?.level || 1)} XP
+              </span>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-2.5">
+            <div style={{
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '99px',
+              height: '8px',
+              overflow: 'hidden',
+            }}>
               <motion.div
-                className="bg-white h-2.5 rounded-full"
+                style={{
+                  height: '100%',
+                  background: 'white',
+                  borderRadius: '99px',
+                }}
                 initial={{ width: 0 }}
                 animate={{ width: `${xpProgress}%` }}
-                transition={{ duration: 0.8, delay: 0.3 }}
+                transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
               />
             </div>
           </div>
         </motion.div>
 
         {/* Lessons */}
-        <div>
-          <h2 className="text-lg font-black text-gray-800 mb-4">Lessons tersedia</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {lessons.map((lesson, i) => (
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '18px',
+            fontWeight: 700,
+            color: 'var(--text)',
+            letterSpacing: '-0.3px',
+          }}>
+            {t(lang, 'lessonsAvailable')}
+          </h2>
+          <span style={{
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+            fontWeight: 600,
+          }}>
+            {completedCount}/{lessons.length} selesai
+          </span>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+          gap: '12px',
+        }}>
+          {lessons.map((lesson, i) => {
+            const diffStyle = getDifficultyStyle(lesson.difficulty)
+            const isCompleted = lesson.progress?.status === 'COMPLETED'
+
+            return (
               <motion.div
                 key={lesson.id}
-                className="bg-white rounded-3xl p-5 border-2 border-gray-100 cursor-pointer hover:border-green-300 hover:shadow-lg hover:shadow-green-50 transition-all"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.05 }}
+                transition={{ delay: 0.05 + i * 0.05 }}
+                whileHover={{ y: -3, boxShadow: 'var(--shadow-md)' }}
+                whileTap={{ scale: 0.99 }}
                 onClick={() => router.push(`/learn/${lesson.id}`)}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.98 }}
+                style={{
+                  background: 'var(--bg-card)',
+                  border: `1.5px solid ${isCompleted ? 'var(--green-muted)' : 'var(--border)'}`,
+                  borderRadius: '20px',
+                  padding: '20px',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-sm)',
+                  transition: 'border-color 0.2s',
+                }}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl bg-gray-50 p-2 rounded-2xl">{getCategoryEmoji(lesson.category)}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      background: 'var(--bg-subtle)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '22px',
+                      flexShrink: 0,
+                    }}>
+                      {getCategoryEmoji(lesson.category)}
+                    </div>
                     <div>
-                      <h3 className="font-black text-gray-800 text-sm">{lesson.title}</h3>
-                      <span className={`text-xs font-black px-2.5 py-0.5 rounded-full mt-0.5 inline-block ${getDifficultyStyle(lesson.difficulty)}`}>
+                      <h3 style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: 'var(--text)',
+                        marginBottom: '4px',
+                        letterSpacing: '-0.2px',
+                      }}>
+                        {lesson.title}
+                      </h3>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        color: diffStyle.color,
+                        background: diffStyle.bg,
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        letterSpacing: '0.5px',
+                      }}>
                         {lesson.difficulty}
                       </span>
                     </div>
                   </div>
-                  {lesson.progress?.status === 'COMPLETED' && (
-                    <span className="text-xl">✅</span>
-                  )}
-                  {lesson.progress?.status === 'IN_PROGRESS' && (
-                    <span className="text-xl">⏳</span>
-                  )}
+                  {isCompleted && <span style={{ fontSize: '20px' }}>✅</span>}
+                  {lesson.progress?.status === 'IN_PROGRESS' && <span style={{ fontSize: '20px' }}>⏳</span>}
                 </div>
-                <p className="text-gray-400 text-xs mb-4 leading-relaxed line-clamp-2">{lesson.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400 font-semibold">📝 {lesson.questionCount} soal</span>
-                  <span className="text-xs font-black text-green-500 bg-green-50 px-2.5 py-1 rounded-full">+{lesson.xpReward} XP</span>
+
+                <p style={{
+                  fontSize: '13px',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.5,
+                  marginBottom: '14px',
+                }}>
+                  {lesson.description}
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-subtle)', fontWeight: 600 }}>
+                    📝 {lesson.questionCount} {t(lang, 'questions')}
+                  </span>
+                  <span style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: 'var(--green)',
+                    background: 'var(--green-light)',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    fontFamily: 'var(--font-display)',
+                  }}>
+                    +{lesson.xpReward} XP
+                  </span>
                 </div>
               </motion.div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </div>
     </main>

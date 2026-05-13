@@ -2,100 +2,201 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import Navbar from '@/components/Navbar'
+import { useLangStore } from '@/stores/langStore'
+import { t } from '@/lib/i18n'
 
 export default function LandingPage() {
+  const { lang } = useLangStore()
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <span className="text-3xl">🌍</span>
-          <span className="text-xl font-black text-green-600 tracking-tight">EnglishQuest</span>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/login">
-            <button className="font-bold text-sm py-2.5 px-5 rounded-2xl border-2 border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-600 transition-all">
-              Log In
-            </button>
-          </Link>
-          <Link href="/register">
-            <button className="font-bold text-sm py-2.5 px-5 rounded-2xl bg-green-500 text-white hover:bg-green-600 transition-all shadow-md shadow-green-200">
-              Get Started
-            </button>
-          </Link>
-        </div>
-      </nav>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Navbar variant="landing" />
 
       {/* Hero */}
-      <section className="text-center px-6 py-16 max-w-3xl mx-auto">
+      <section style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        padding: '80px 24px 60px',
+        textAlign: 'center',
+      }}>
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <motion.div
-            className="text-8xl mb-6 inline-block"
-            animate={{ rotate: [0, -10, 10, -5, 5, 0] }}
-            transition={{ duration: 1, delay: 0.5 }}
+            style={{ fontSize: '72px', marginBottom: '24px', display: 'inline-block' }}
+            animate={{ rotate: [0, -8, 8, -4, 4, 0] }}
+            transition={{ duration: 1.2, delay: 0.5 }}
           >
             🎯
           </motion.div>
-          <h1 className="text-5xl font-black text-gray-800 mb-4 leading-tight">
-            Belajar Bahasa Inggris<br />
-            <span className="text-green-500">Sambil Bermain</span>
+
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(36px, 6vw, 64px)',
+            fontWeight: 700,
+            color: 'var(--text)',
+            lineHeight: 1.15,
+            marginBottom: '16px',
+            letterSpacing: '-1.5px',
+          }}>
+            {t(lang, 'tagline')}<br />
+            <span style={{ color: 'var(--green)' }}>{t(lang, 'taglineAccent')}</span>
           </h1>
-          <p className="text-lg text-gray-500 mb-10 max-w-xl mx-auto leading-relaxed">
-            Kuasai bahasa Inggris dengan cara yang menyenangkan.<br/>
-            Streak, XP, dan achievement menanti!
+
+          <p style={{
+            fontSize: '18px',
+            color: 'var(--text-muted)',
+            marginBottom: '40px',
+            lineHeight: 1.7,
+            maxWidth: '520px',
+            margin: '0 auto 40px',
+          }}>
+            {t(lang, 'taglineDesc')}
           </p>
+
           <Link href="/register">
             <motion.button
-              className="bg-green-500 hover:bg-green-600 text-white font-black text-lg py-4 px-12 rounded-3xl shadow-lg shadow-green-200 transition-all"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
+              style={{
+                background: 'var(--green)',
+                color: 'white',
+                border: 'none',
+                padding: '16px 40px',
+                borderRadius: '14px',
+                fontSize: '18px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'var(--font-display)',
+                boxShadow: 'var(--shadow-green)',
+                letterSpacing: '-0.3px',
+              }}
+              whileHover={{ scale: 1.04, y: -2 }}
+              whileTap={{ scale: 0.97 }}
             >
-              Mulai Gratis →
+              {t(lang, 'startFree')}
             </motion.button>
           </Link>
-          <p className="text-sm text-gray-400 mt-4">Gratis selamanya · Tanpa kartu kredit</p>
+
+          <p style={{
+            marginTop: '12px',
+            fontSize: '13px',
+            color: 'var(--text-subtle)',
+            fontWeight: 600,
+          }}>
+            {t(lang, 'freeForever')}
+          </p>
         </motion.div>
       </section>
 
       {/* Features */}
-      <section className="px-6 pb-20 max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <section style={{
+        maxWidth: '1000px',
+        margin: '0 auto',
+        padding: '0 24px 60px',
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '16px',
+        }}>
           {[
-            { icon: '🔥', title: 'Daily Streak', desc: 'Belajar setiap hari dan pertahankan streak-mu! Semakin panjang streak, semakin besar bonus XP.', color: 'from-orange-50 to-red-50', border: 'border-orange-100' },
-            { icon: '⚡', title: 'XP & Level', desc: 'Kumpulkan XP dan naik level dengan setiap lesson yang kamu selesaikan.', color: 'from-yellow-50 to-amber-50', border: 'border-yellow-100' },
-            { icon: '🏆', title: 'Achievement', desc: 'Raih berbagai achievement tersembunyi dan tunjukkan kemampuanmu!', color: 'from-purple-50 to-indigo-50', border: 'border-purple-100' },
+            { icon: '🔥', title: t(lang, 'dailyStreak'), desc: t(lang, 'dailyStreakDesc'), accent: 'var(--orange)', bg: 'var(--orange-light)' },
+            { icon: '⚡', title: t(lang, 'xpLevel'), desc: t(lang, 'xpLevelDesc'), accent: 'var(--yellow)', bg: 'var(--yellow-light)' },
+            { icon: '🏆', title: t(lang, 'achievement'), desc: t(lang, 'achievementDesc'), accent: '#8B5CF6', bg: '#F5F3FF' },
           ].map((f, i) => (
             <motion.div
               key={i}
-              className={`bg-gradient-to-br ${f.color} border ${f.border} rounded-3xl p-6 text-center`}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1.5px solid var(--border)',
+                borderRadius: '20px',
+                padding: '28px',
+                boxShadow: 'var(--shadow-sm)',
+              }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.1 }}
-              whileHover={{ y: -4 }}
+              whileHover={{ y: -4, boxShadow: 'var(--shadow-md)' }}
             >
-              <div className="text-5xl mb-4">{f.icon}</div>
-              <h3 className="font-black text-lg text-gray-800 mb-2">{f.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '14px',
+                background: f.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '26px',
+                marginBottom: '16px',
+              }}>
+                {f.icon}
+              </div>
+              <h3 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '16px',
+                fontWeight: 700,
+                color: 'var(--text)',
+                marginBottom: '8px',
+              }}>
+                {f.title}
+              </h3>
+              <p style={{
+                fontSize: '14px',
+                color: 'var(--text-muted)',
+                lineHeight: 1.6,
+              }}>
+                {f.desc}
+              </p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* CTA Bottom */}
-      <section className="text-center pb-20 px-6">
-        <div className="bg-green-500 max-w-2xl mx-auto rounded-3xl p-10 shadow-xl shadow-green-200">
-          <h2 className="text-3xl font-black text-white mb-3">Siap mulai belajar?</h2>
-          <p className="text-green-100 mb-6">Bergabung dengan ribuan pelajar yang sudah merasakan manfaatnya.</p>
+      {/* CTA */}
+      <section style={{ padding: '0 24px 80px', maxWidth: '700px', margin: '0 auto' }}>
+        <motion.div
+          style={{
+            background: 'var(--green)',
+            borderRadius: '24px',
+            padding: '48px 40px',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-green)',
+          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '28px',
+            fontWeight: 700,
+            color: 'white',
+            marginBottom: '8px',
+            letterSpacing: '-0.5px',
+          }}>
+            {t(lang, 'readyToLearn')}
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '24px', fontSize: '15px' }}>
+            {t(lang, 'joinDesc')}
+          </p>
           <Link href="/register">
-            <button className="bg-white text-green-600 font-black py-3 px-10 rounded-2xl hover:bg-green-50 transition-all">
-              Daftar Sekarang
+            <button style={{
+              background: 'white',
+              color: 'var(--green-dark)',
+              border: 'none',
+              padding: '12px 32px',
+              borderRadius: '12px',
+              fontWeight: 800,
+              fontSize: '15px',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-display)',
+            }}>
+              {t(lang, 'registerNow')}
             </button>
           </Link>
-        </div>
+        </motion.div>
       </section>
     </main>
   )
