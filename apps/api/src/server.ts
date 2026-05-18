@@ -52,11 +52,17 @@ app.get('/health', async () => {
 
 const start = async () => {
   try {
+    console.log('Starting server...')
+    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL)
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET)
+    console.log('NODE_ENV:', process.env.NODE_ENV)
+    
     const port = Number(process.env.API_PORT) || 3001
     await app.listen({ port, host: '0.0.0.0' })
     console.log(`🚀 API running at http://localhost:${port}`)
-  } catch (err) {
-    app.log.error(err)
+  } catch (err: any) {
+    console.error('STARTUP ERROR:', err.message)
+    console.error(err.stack)
     process.exit(1)
   }
 }
