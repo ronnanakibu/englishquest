@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import api from '@/lib/api'
 
 interface User {
@@ -17,10 +17,13 @@ interface AuthState {
   user: User | null
   accessToken: string | null
   isLoading: boolean
+  isHydrated: boolean
   login: (email: string, password: string) => Promise<void>
   register: (email: string, username: string, password: string) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User) => void
+  setHydrated: () => void
+  refreshUser: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -29,6 +32,16 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       accessToken: null,
       isLoading: false,
+      isHydrated: false,
+
+      setHydrated: () => set({ isHydrated: true }),
+
+      refreshUser: async () => {
+        try {
+          const res = await api.get('/api/v1/user/me')
+          set({ user: res.data.user })
+        } catch {}
+      },
 
       login: async (email, password) => {
         set({ isLoading: true })
@@ -55,7 +68,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        await api.post('/api/v1/auth/logout')
+        try {
+          await api.post('/api/v1/auth/logout')
+        } catch {}
         localStorage.removeItem('accessToken')
         set({ user: null, accessToken: null })
       },
@@ -64,7 +79,17 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, accessToken: state.accessToken })
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          localStorage.setItem('accessToken', state.accessToken)
+        }
+        state?.setHydrated()
+      }
     }
   )
 )

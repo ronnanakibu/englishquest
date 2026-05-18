@@ -4,12 +4,36 @@ export class ProgressRepository {
   constructor(private prisma: PrismaClient) {}
 
   async findOrCreate(userId: string, lessonId: string) {
-    return this.prisma.userProgress.upsert({
+  // Coba find dulu
+  const existing = await this.prisma.userProgress.findUnique({
+    where: { userId_lessonId: { userId, lessonId } }
+  })
+
+  if (existing) {
+    return this.prisma.userProgress.update({
       where: { userId_lessonId: { userId, lessonId } },
-      create: { userId, lessonId, status: 'IN_PROGRESS', attempts: 1 },
-      update: { status: 'IN_PROGRESS', attempts: { increment: 1 } }
+      data: {
+        status: existing.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS',
+        attempts: { increment: 1 }
+      }
     })
   }
+
+  // Kalau create gagal karena duplicate, fallback ke findUnique
+  try {
+    return await this.prisma.userProgress.create({
+      data: { userId, lessonId, status: 'IN_PROGRESS', attempts: 1 }
+    })
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      // Already exists — just return it
+      return this.prisma.userProgress.findUnique({
+        where: { userId_lessonId: { userId, lessonId } }
+      })
+    }
+    throw err
+  }
+}
 
   async findByUserAndLesson(userId: string, lessonId: string) {
     return this.prisma.userProgress.findUnique({

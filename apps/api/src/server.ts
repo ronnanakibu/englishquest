@@ -7,12 +7,22 @@ import prismaPlugin from './plugins/prisma.plugin'
 import authRoutes from './modules/auth/auth.route'
 import lessonRoutes from './modules/lesson/lesson.route'
 import progressRoutes from './modules/progress/progress.route'
+import userRoutes from './modules/user/user.route'
+import leaderboardRoutes from './modules/leaderboard/leaderboard.route'
+import achievementRoutes from './modules/achievements/achievement.route'
+import checkinRoutes from './modules/checkin/checkin.route'
+
 
 config()
 
 const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
 })
+
+app.register(userRoutes, { prefix: '/api/v1/user' })
+app.register(leaderboardRoutes, { prefix: '/api/v1/leaderboard' })
+app.register(achievementRoutes, { prefix: '/api/v1/achievements' })
+app.register(checkinRoutes, { prefix: '/api/v1/checkin' })
 
 app.register(cors, {
   origin: (origin, cb) => {

@@ -8,6 +8,14 @@ import { useGameStore } from '@/stores/gameStore'
 import { useLangStore } from '@/stores/langStore'
 import { t } from '@/lib/i18n'
 import api from '@/lib/api'
+import confetti from 'canvas-confetti'
+import XPFloat from '@/components/XPFloat'
+import AchievementPopup from '@/components/AchievementPopup'
+import LevelUpScreen from '@/components/LevelUpScreen'
+import { sounds } from '@/lib/sounds'
+import BottomNav from '@/components/BottomNav'
+
+
 
 interface Question {
   id: string
@@ -19,11 +27,125 @@ interface Question {
 
 type AnswerState = 'idle' | 'correct' | 'wrong'
 
+function RearrangeBlock({ words, onAnswer, disabled, answerState }: {
+  words: string[]
+  onAnswer: (answer: string) => void
+  disabled: boolean
+  answerState: string
+}) {
+  const [available, setAvailable] = useState<string[]>([...words].sort(() => Math.random() - 0.5))
+  const [selected, setSelected] = useState<string[]>([])
+
+  const addWord = (word: string, index: number) => {
+    if (disabled) return
+    setSelected([...selected, word])
+    setAvailable(available.filter((_, i) => i !== index))
+  }
+
+  const removeWord = (word: string, index: number) => {
+    if (disabled) return
+    setAvailable([...available, word])
+    setSelected(selected.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Selected words area */}
+      <div style={{
+        minHeight: '60px',
+        border: '2px dashed var(--border)',
+        borderRadius: '14px',
+        padding: '12px 16px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '8px',
+        alignItems: 'center',
+        background: 'var(--bg-subtle)',
+        
+      }}>
+        {selected.length === 0 && (
+          <span style={{ color: 'var(--text-subtle)', fontSize: '14px', fontWeight: 600 }}>
+            Tap words below to build your sentence...
+          </span>
+        )}
+        {selected.map((word, i) => (
+          <motion.button
+            key={i}
+            onClick={() => removeWord(word, i)}
+            disabled={disabled}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '2px solid var(--green)',
+              background: 'var(--green-light)',
+              color: 'var(--green-dark)',
+              fontWeight: 700,
+              fontSize: '14px',
+              cursor: disabled ? 'default' : 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {word}
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Available words */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {available.map((word, i) => (
+          <motion.button
+            key={i}
+            onClick={() => addWord(word, i)}
+            disabled={disabled}
+            whileTap={{ scale: 0.95 }}
+            whileHover={{ y: -2 }}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: '2px solid var(--border)',
+              background: 'var(--bg-card)',
+              color: 'var(--text)',
+              fontWeight: 700,
+              fontSize: '14px',
+              cursor: disabled ? 'default' : 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {word}
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Submit button */}
+      {selected.length > 0 && !disabled && (
+        <motion.button
+          onClick={() => onAnswer(selected.join(' '))}
+          whileTap={{ scale: 0.98 }}
+          style={{
+            padding: '14px',
+            borderRadius: '14px',
+            border: 'none',
+            background: 'var(--green)',
+            color: 'white',
+            fontWeight: 800,
+            fontSize: '15px',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
+          Check Answer ✓
+        </motion.button>
+      )}
+    </div>
+  )
+}
+
 export default function LessonPage() {
   const router = useRouter()
   const params = useParams()
   const lessonId = params.lessonId as string
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, refreshUser } = useAuthStore()
   const { lang } = useLangStore()
   const { setLesson, nextQuestion, addAnswer, resetGame, decrementHeart, currentQuestionIndex } = useGameStore()
 
@@ -39,53 +161,117 @@ export default function LessonPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [startTime, setStartTime] = useState(Date.now())
   const [currentHearts, setCurrentHearts] = useState(user?.hearts || 5)
+  const [showXPFloat, setShowXPFloat] = useState(false)
+  const [xpFloatAmount, setXPFloatAmount] = useState(0)
+  const [showLevelUp, setShowLevelUp] = useState(false)
+  const [newLevelNum, setNewLevelNum] = useState(0)
+  const [pendingAchievement, setPendingAchievement] = useState<any>(null)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const isHydrated = useAuthStore(state => state.isHydrated)
+  const [combo, setCombo] = useState(0)
+  const [showComboPopup, setShowComboPopup] = useState(false)
+  
 
   useEffect(() => {
+    if (!isHydrated) return
     if (!user) { router.push('/login'); return }
     setCurrentHearts(user.hearts)
     initLesson()
-  }, [lessonId])
+  }, [lessonId, isHydrated])
 
   const initLesson = async () => {
-    try {
-      const lessonRes = await api.get(`/api/v1/lessons/${lessonId}`)
-      const lessonData = lessonRes.data.lesson
-      setLessonData(lessonData)
+  try {
+    const lessonRes = await api.get(`/api/v1/lessons/${lessonId}`)
+    const lessonData = lessonRes.data.lesson
 
-      const startRes = await api.post(`/api/v1/lessons/${lessonId}/start`, {})
-      setProgressId(startRes.data.progressId)
-      setLesson({
-        id: lessonData.id,
-        title: lessonData.title,
-        questions: lessonData.questions,
-        progressId: startRes.data.progressId
+    // Randomize question order
+    const shuffledQuestions = [...lessonData.questions].sort(() => Math.random() - 0.5)
+
+    // Randomize options untuk setiap question
+    const questionsWithShuffledOptions = shuffledQuestions.map((q: any) => {
+      if (q.options && q.type !== 'REARRANGE') {
+        const parsed = JSON.parse(q.options)
+        const shuffled = [...parsed].sort(() => Math.random() - 0.5)
+        return { ...q, options: JSON.stringify(shuffled) }
+      }
+      return q
+    })
+
+    setLessonData({ ...lessonData, questions: questionsWithShuffledOptions })
+
+    const startRes = await api.post(`/api/v1/lessons/${lessonId}/start`, {})
+    const pid = startRes.data.progressId
+    setProgressId(pid)
+
+    setLesson({
+      id: lessonData.id,
+      title: lessonData.title,
+      questions: questionsWithShuffledOptions,
+      progressId: pid
+    })
+    setStartTime(Date.now())
+  } catch (err) {
+    console.error('initLesson error:', err)
+    router.push('/learn')
+  } finally {
+    setIsLoading(false)
+  }
+}
+
+const completeLesson = async (pId: string) => {
+  try {
+    const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId })
+    setResult(res.data)
+ 
+    // Refresh user data dari server
+    await refreshUser()
+ 
+    // XP Float
+    setXPFloatAmount(res.data.xpEarned)
+    setShowXPFloat(true)
+ 
+    // Confetti
+    if (res.data.isPerfect) {
+      confetti({
+        particleCount: 150,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#22C55E', '#F59E0B', '#3B82F6', '#EC4899']
       })
-      setStartTime(Date.now())
-    } catch (err) {
-      router.push('/learn')
-    } finally {
-      setIsLoading(false)
+      sounds.levelUp()
     }
-  }
-
-  const completeLesson = async (pId: string) => {
-    try {
-      const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId })
-      setResult(res.data)
+ 
+    // FIX: Level up screen tampil DULU, baru result screen muncul
+    if (res.data.leveledUp && res.data.newLevel) {
+      setNewLevelNum(res.data.newLevel)
+      setTimeout(() => {
+        setShowLevelUp(true)
+        sounds.levelUp()
+        // Baru set finished setelah level up screen auto-close (3 detik)
+        setTimeout(() => {
+          setShowLevelUp(false)
+          setIsFinished(true)
+        }, 3200)
+      }, 800)
+    } else {
       setIsFinished(true)
-      if (user) setUser({ ...user, xp: user.xp + res.data.xpEarned })
-    } catch (err) {
-      resetGame()
-      router.push('/learn')
     }
+  } catch (err) {
+    resetGame()
+    router.push('/learn')
   }
+}
+ 
 
   const currentQuestion = lesson?.questions[currentQuestionIndex]
   const totalQuestions = lesson?.questions.length || 0
   const progress = totalQuestions > 0 ? (currentQuestionIndex / totalQuestions) * 100 : 0
 
   const handleAnswer = async (answer: string) => {
-    if (answerState !== 'idle' || !currentQuestion || !progressId) return
+    if (answerState !== 'idle' || !currentQuestion || !progressId) {
+      console.log('Guard triggered:', { answerState, currentQuestion: !!currentQuestion, progressId })
+      return
+    }
 
     setSelectedAnswer(answer)
     const timeSpent = Date.now() - startTime
@@ -103,7 +289,24 @@ export default function LessonPage() {
       setExplanation(exp || null)
       setCorrectAnswer(correct || null)
       addAnswer({ questionId: currentQuestion.id, isCorrect, userAnswer: answer })
-
+ 
+      // Combo logic
+      if (isCorrect) {
+        const newCombo = combo + 1
+        setCombo(newCombo)
+        if (newCombo >= 3) {
+          setShowComboPopup(true)
+          setTimeout(() => setShowComboPopup(false), 1200)
+        }
+        sounds.correct()
+      } else {
+        setCombo(0)
+      }
+ 
+      if (isCorrect) {
+        // (sounds.correct() already called above)
+      } else {
+          sounds.wrong()
       if (!isCorrect) {
         const newHearts = currentHearts - 1
         setCurrentHearts(newHearts)
@@ -119,10 +322,12 @@ export default function LessonPage() {
           return
         }
       }
+    }
     } catch (err) {
       console.error(err)
     }
   }
+  
 
   const handleNext = async () => {
     setSelectedAnswer(null)
@@ -299,6 +504,11 @@ export default function LessonPage() {
                 {t(lang, 'perfectBonus')}
               </div>
             )}
+            {combo >= 5 && (
+              <div style={{ fontSize: '12px', color: 'var(--yellow)', fontWeight: 700, marginTop: '2px' }}>
+                🔥 Max Combo x{combo}!
+              </div>
+            )}
           </motion.div>
 
           <motion.button
@@ -389,6 +599,37 @@ export default function LessonPage() {
             {currentHearts}
           </span>
         </div>
+ 
+        {/* Combo badge — muncul kalau combo >= 2 */}
+        <AnimatePresence>
+          {combo >= 2 && (
+            <motion.div
+              key={combo}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px',
+                background: combo >= 5 ? '#FEF3C7' : 'var(--bg-subtle)',
+                border: `1.5px solid ${combo >= 5 ? '#F59E0B' : 'var(--border)'}`,
+                padding: '4px 9px',
+                borderRadius: '8px',
+              }}
+            >
+              <span style={{ fontSize: '13px' }}>🔥</span>
+              <span style={{
+                fontWeight: 800,
+                fontSize: '13px',
+                color: combo >= 5 ? '#D97706' : 'var(--text-muted)',
+                fontFamily: 'var(--font-display)',
+              }}>
+                {combo}x
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Question area */}
@@ -430,8 +671,8 @@ export default function LessonPage() {
                 {currentQuestion.prompt}
               </h2>
 
-              {/* Options */}
-              {currentQuestion.options && (
+{/* Multiple Choice, Fill Blank, Translate, Error Detect */}
+              {currentQuestion.options && currentQuestion.type !== 'REARRANGE' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(JSON.parse(currentQuestion.options as any) as string[]).map((option, i) => {
                     const isSelected = selectedAnswer === option
@@ -443,21 +684,13 @@ export default function LessonPage() {
 
                     if (answerState !== 'idle') {
                       if (isSelected && answerState === 'correct') {
-                        borderColor = 'var(--green)'
-                        bg = 'var(--green-light)'
-                        color = 'var(--green-dark)'
+                        borderColor = 'var(--green)'; bg = 'var(--green-light)'; color = 'var(--green-dark)'
                       } else if (isSelected && answerState === 'wrong') {
-                        borderColor = 'var(--red)'
-                        bg = 'var(--red-light)'
-                        color = 'var(--red)'
+                        borderColor = 'var(--red)'; bg = 'var(--red-light)'; color = 'var(--red)'
                       } else if (isCorrectOption) {
-                        borderColor = 'var(--green)'
-                        bg = 'var(--green-light)'
-                        color = 'var(--green-dark)'
+                        borderColor = 'var(--green)'; bg = 'var(--green-light)'; color = 'var(--green-dark)'
                       } else {
-                        borderColor = 'var(--border)'
-                        bg = 'var(--bg-subtle)'
-                        color = 'var(--text-subtle)'
+                        borderColor = 'var(--border)'; bg = 'var(--bg-subtle)'; color = 'var(--text-subtle)'
                       }
                     }
 
@@ -481,7 +714,7 @@ export default function LessonPage() {
                           transition: 'all 0.15s',
                         }}
                         whileTap={answerState === 'idle' ? { scale: 0.99 } : {}}
-                        whileHover={answerState === 'idle' ? { borderColor: 'var(--green)', y: -1 } : {}}
+                        whileHover={answerState === 'idle' ? { borderColor: 'var(--green)' } : {}}
                       >
                         {option}
                       </motion.button>
@@ -490,8 +723,18 @@ export default function LessonPage() {
                 </div>
               )}
 
-              {/* Text input */}
-              {!currentQuestion.options && (
+              {/* REARRANGE — drag words to form sentence */}
+              {currentQuestion.type === 'REARRANGE' && currentQuestion.options && (
+                <RearrangeBlock
+                  words={JSON.parse(currentQuestion.options as any) as string[]}
+                  onAnswer={handleAnswer}
+                  disabled={answerState !== 'idle'}
+                  answerState={answerState}
+                />
+              )}
+
+              {/* Text input — no options */}
+              {!currentQuestion.options && currentQuestion.type !== 'REARRANGE' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <input
                     id="text-answer"
@@ -542,72 +785,127 @@ export default function LessonPage() {
                   )}
                 </div>
               )}
+
+                    {/* Feedback bar */}
+              <AnimatePresence>
+                {answerState !== 'idle' && !noHeartsWarning && (
+                  <motion.div
+                    initial={{ y: 100 }}
+                    animate={{ y: 0 }}
+                    exit={{ y: 100 }}
+                    style={{
+                      position: 'fixed',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '20px 24px',
+                      background: answerState === 'correct' ? 'var(--green-light)' : 'var(--red-light)',
+                      borderTop: `2px solid ${answerState === 'correct' ? 'var(--green-muted)' : 'var(--red)'}`,
+                    }}
+                  >
+                    <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                      <div>
+                        <p style={{
+                          fontFamily: 'var(--font-display)',
+                          fontWeight: 800,
+                          fontSize: '17px',
+                          color: answerState === 'correct' ? 'var(--green-dark)' : 'var(--red)',
+                          marginBottom: '2px',
+                        }}>
+                          {answerState === 'correct' ? t(lang, 'correct') : t(lang, 'wrong')}
+                        </p>
+                        {explanation && (
+                          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{explanation}</p>
+                        )}
+                        {correctAnswer && (
+                          <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>
+                            {t(lang, 'answer')}: {correctAnswer}
+                          </p>
+                        )}
+                      </div>
+
+                      <motion.button
+                        onClick={handleNext}
+                        style={{
+                          padding: '12px 24px',
+                          borderRadius: '12px',
+                          border: 'none',
+                          background: answerState === 'correct' ? 'var(--green)' : 'var(--red)',
+                          color: 'white',
+                          fontWeight: 800,
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          fontFamily: 'var(--font-display)',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
+                        }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        {currentQuestionIndex + 1 >= totalQuestions ? t(lang, 'finish') : t(lang, 'next')}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Feedback bar */}
+            {/* Reward overlays */}
+      <XPFloat
+        amount={xpFloatAmount}
+        show={showXPFloat}
+        onComplete={() => setShowXPFloat(false)}
+      />
+ 
+      {/* Combo popup */}
       <AnimatePresence>
-        {answerState !== 'idle' && !noHeartsWarning && (
+        {showComboPopup && (
           <motion.div
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            exit={{ y: 100 }}
+            initial={{ opacity: 0, y: -20, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.9 }}
             style={{
               position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '20px 24px',
-              background: answerState === 'correct' ? 'var(--green-light)' : 'var(--red-light)',
-              borderTop: `2px solid ${answerState === 'correct' ? 'var(--green-muted)' : 'var(--red)'}`,
+              top: '72px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 999,
+              background: combo >= 5 ? '#FEF3C7' : 'var(--bg-card)',
+              border: `2px solid ${combo >= 5 ? '#F59E0B' : 'var(--green)'}`,
+              borderRadius: '16px',
+              padding: '10px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              pointerEvents: 'none',
             }}
           >
-            <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-              <div>
-                <p style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 800,
-                  fontSize: '17px',
-                  color: answerState === 'correct' ? 'var(--green-dark)' : 'var(--red)',
-                  marginBottom: '2px',
-                }}>
-                  {answerState === 'correct' ? t(lang, 'correct') : t(lang, 'wrong')}
-                </p>
-                {explanation && (
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{explanation}</p>
-                )}
-                {correctAnswer && (
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>
-                    {t(lang, 'answer')}: {correctAnswer}
-                  </p>
-                )}
-              </div>
-
-              <motion.button
-                onClick={handleNext}
-                style={{
-                  padding: '12px 24px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: answerState === 'correct' ? 'var(--green)' : 'var(--red)',
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-display)',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                }}
-                whileTap={{ scale: 0.97 }}
-              >
-                {currentQuestionIndex + 1 >= totalQuestions ? t(lang, 'finish') : t(lang, 'next')}
-              </motion.button>
-            </div>
+            <span style={{ fontSize: '20px' }}>🔥</span>
+            <span style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              fontSize: '15px',
+              color: combo >= 5 ? '#D97706' : 'var(--green-dark)',
+            }}>
+              {combo >= 5 ? `${combo}x COMBO!` : combo >= 3 ? `${combo} in a row!` : ''}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <LevelUpScreen
+        newLevel={newLevelNum}
+        show={showLevelUp}
+        onClose={() => setShowLevelUp(false)}
+      />
+
+      <AchievementPopup
+        achievement={pendingAchievement}
+        onClose={() => setPendingAchievement(null)}
+      />
+      <BottomNav />
     </main>
   )
 }

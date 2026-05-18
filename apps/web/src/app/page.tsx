@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Navbar from '@/components/Navbar'
 import { useLangStore } from '@/stores/langStore'
 import { t } from '@/lib/i18n'
+import { useAuthStore } from '@/stores/authStore'
 
 export default function LandingPage() {
   const { lang } = useLangStore()

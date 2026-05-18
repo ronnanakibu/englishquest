@@ -140,12 +140,13 @@ export class ProgressService {
   }
 
   private calculateLevel(xp: number): number {
-    let level = 1
-    while (xp >= Math.floor(100 * Math.pow(level + 1, 2))) {
-      level++
-      if (level >= 100) break
-    }
-    return level
+  let level = 1
+  while (level < 100) {
+    const xpNeeded = Math.floor(100 * Math.pow(level + 1, 2))
+    if (xp < xpNeeded) break
+    level++
+  }
+  return level
   }
 
   private async updateStreak(userId: string) {

@@ -8,6 +8,7 @@ import { useLangStore } from '@/stores/langStore'
 import { t } from '@/lib/i18n'
 import Navbar from '@/components/Navbar'
 import api from '@/lib/api'
+import BottomNav from '@/components/BottomNav'
 
 interface Lesson {
   id: string
@@ -78,11 +79,13 @@ export default function LearnPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [lockedTooltip, setLockedTooltip] = useState<string | null>(null)
+  const isHydrated = useAuthStore(state => state.isHydrated)
 
   useEffect(() => {
+    if (!isHydrated) return // Tunggu dulu
     if (!user) { router.push('/login'); return }
     fetchLessons()
-  }, [user])
+  }, [user, isHydrated])
 
   const fetchLessons = async () => {
     try {
@@ -212,7 +215,7 @@ export default function LearnPage() {
         </motion.div>
 
         {/* Unit Path */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '80px' }}>
           {units.map((unit, unitIndex) => {
             const unitCompleted = unit.lessons.filter(l => l.progress?.status === 'COMPLETED').length
             const unitTotal = unit.lessons.length
@@ -381,8 +384,9 @@ export default function LearnPage() {
               </motion.div>
             )
           })}
+          </div>
         </div>
-      </div>
+      <BottomNav />
     </main>
   )
 }

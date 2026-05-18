@@ -8,8 +8,8 @@ const api = axios.create({
   }
 })
 
-// Auto attach token dari localStorage
 api.interceptors.request.use((config) => {
+  // Baca dari localStorage setiap request
   const token = localStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -17,7 +17,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Auto logout kalau 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
