@@ -7,6 +7,16 @@ import authRoutes from './modules/auth/auth.route'
 import lessonRoutes from './modules/lesson/lesson.route'
 import progressRoutes from './modules/progress/progress.route'
 
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason)
+  process.exit(1)
+})
+
 // Load .env hanya di development
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config()
