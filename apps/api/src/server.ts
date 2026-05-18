@@ -2,13 +2,15 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import jwt from '@fastify/jwt'
 import cors from '@fastify/cors'
-import { config } from 'dotenv'
 import prismaPlugin from './plugins/prisma.plugin'
 import authRoutes from './modules/auth/auth.route'
 import lessonRoutes from './modules/lesson/lesson.route'
 import progressRoutes from './modules/progress/progress.route'
 
-config()
+// Load .env hanya di development
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config()
+}
 
 const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
