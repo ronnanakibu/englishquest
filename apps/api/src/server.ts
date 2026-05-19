@@ -10,6 +10,8 @@ import userRoutes from './modules/user/user.route'
 import leaderboardRoutes from './modules/leaderboard/leaderboard.route'
 import achievementRoutes from './modules/achievements/achievement.route'
 import checkinRoutes from './modules/checkin/checkin.route'
+import { aiRoutes } from './modules/ai/ai.route'
+import questRoutes from './modules/quest/quest.route'
 
 const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
@@ -40,6 +42,8 @@ app.register(userRoutes, { prefix: '/api/v1/user' })
 app.register(leaderboardRoutes, { prefix: '/api/v1/leaderboard' })
 app.register(achievementRoutes, { prefix: '/api/v1/achievements' })
 app.register(checkinRoutes, { prefix: '/api/v1/checkin' })
+fastify.register(aiRoutes, { prefix: '/api/v1/ai' })
+fastify.register(questRoutes, { prefix: '/api/v1/quests' })
 
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() }

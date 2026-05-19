@@ -169,7 +169,11 @@ export default function LessonPage() {
   const [soundEnabled, setSoundEnabled] = useState(true)
   const isHydrated = useAuthStore(state => state.isHydrated)
   const [combo, setCombo] = useState(0)
+  const [maxCombo, setMaxCombo] = useState(0)
   const [showComboPopup, setShowComboPopup] = useState(false)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null)
   
 
   useEffect(() => {
@@ -218,9 +222,32 @@ export default function LessonPage() {
   }
 }
 
+const handleAskAi = async () => {
+    if (!currentQuestion) return
+    
+    setShowAiModal(true)
+    setIsAiLoading(true)
+    setAiExplanation(null)
+    
+    try {
+      const res = await api.post('/api/v1/ai/explain', {
+        prompt: currentQuestion.prompt,
+        // Jika sedang salah, kirim jawaban user. Jika belum dijawab, kirim null untuk minta hint.
+        userAnswer: answerState === 'wrong' ? selectedAnswer : null,
+        correctAnswer: correctAnswer || null
+      })
+      setAiExplanation(res.data.explanation)
+    } catch (err) {
+      console.error(err)
+      setAiExplanation('Waduh, AI Tutor lagi sibuk nih. Coba lagi nanti ya!')
+    } finally {
+      setIsAiLoading(false)
+    }
+  }
+
 const completeLesson = async (pId: string) => {
   try {
-    const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId })
+    const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId, maxCombo: maxCombo})
     setResult(res.data)
  
     // Refresh user data dari server
@@ -290,10 +317,12 @@ const completeLesson = async (pId: string) => {
       setCorrectAnswer(correct || null)
       addAnswer({ questionId: currentQuestion.id, isCorrect, userAnswer: answer })
  
-      // Combo logic
+      // Combo logic (di dalam try blok isCorrect)
       if (isCorrect) {
         const newCombo = combo + 1
         setCombo(newCombo)
+        if (newCombo > maxCombo) setMaxCombo(newCombo) // <--- UPDATE MAX COMBO
+
         if (newCombo >= 3) {
           setShowComboPopup(true)
           setTimeout(() => setShowComboPopup(false), 1200)
@@ -905,6 +934,112 @@ const completeLesson = async (pId: string) => {
         achievement={pendingAchievement}
         onClose={() => setPendingAchievement(null)}
       />
+      {/* 💡 FLOATING AI BUTTON */}
+      {!isFinished && !noHeartsWarning && (
+        <motion.button
+          onClick={handleAskAi}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.9 }}
+          style={{
+            position: 'fixed',
+            bottom: answerState !== 'idle' ? '100px' : '30px', // Naik sedikit kalau feedback bar (hijau/merah) muncul
+            right: '24px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #A855F7, #7E22CE)', // Warna ungu khas AI
+            color: 'white',
+            border: 'none',
+            boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
+            fontSize: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 900,
+          }}
+        >
+          💡
+        </motion.button>
+      )}
+
+      {/* 🤖 MODAL AI TUTOR */}
+      <AnimatePresence>
+        {showAiModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '24px',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: '24px',
+                padding: '32px 24px',
+                width: '100%',
+                maxWidth: '400px',
+                border: '2px solid #A855F7',
+                boxShadow: '0 10px 40px rgba(168, 85, 247, 0.2)',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤖</div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, color: '#A855F7', marginBottom: '16px' }}>
+                AI Tutor
+              </h2>
+              
+              <div style={{ minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isAiLoading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    style={{ fontSize: '32px' }}
+                  >
+                    ⏳
+                  </motion.div>
+                ) : (
+                  <p style={{ fontSize: '15px', color: 'var(--text)', lineHeight: 1.6, fontWeight: 600 }}>
+                    {aiExplanation}
+                  </p>
+                )}
+              </div>
+
+              <motion.button
+                onClick={() => setShowAiModal(false)}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  marginTop: '24px',
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  background: 'var(--bg-subtle)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)',
+                  fontWeight: 800,
+                  fontSize: '15px',
+                  fontFamily: 'var(--font-display)',
+                  cursor: 'pointer',
+                }}
+              >
+                Tutup
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }

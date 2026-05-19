@@ -63,7 +63,7 @@ export class ProgressService {
     }
   }
 
-  async completeLesson(userId: string, lessonId: string, progressId: string) {
+  async completeLesson(userId: string, lessonId: string, progressId: string, maxCombo: number = 0) {
     const lesson = await this.prisma.lesson.findUnique({ where: { id: lessonId } })
     if (!lesson) throw new AppError('Lesson tidak ditemukan', 404)
 
@@ -82,35 +82,82 @@ export class ProgressService {
       ? Math.round((correctAnswers / totalQuestions) * 100)
       : 0
 
-    let xpEarned = lesson.xpReward
-    if (score === 100) xpEarned = Math.round(lesson.xpReward * 1.5)
+    // 1. Base XP
+    let baseXpEarned = lesson.xpReward
+    if (score === 100) baseXpEarned = Math.round(lesson.xpReward * 1.5)
+
+    // 2. Kalkulasi Combo Bonus
+    let comboBonus = 0
+    if (maxCombo >= 5) comboBonus = 15
+    else if (maxCombo >= 3) comboBonus = 5
+
+    // 3. Kalkulasi Daily Quest Bonus
+    let questBonus = 0
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Cek apakah ada misi harian untuk lesson ini hari ini
+    const dailyChallenge = await this.prisma.dailyChallenge.findFirst({
+      where: { date: today, lessonId: lessonId }
+    })
+
+    // Syarat lulus misi: skor minimal 70
+    if (dailyChallenge && score >= 70) {
+      const alreadyCompleted = await this.prisma.userDailyChallenge.findUnique({
+        where: { userId_challengeId: { userId, challengeId: dailyChallenge.id } }
+      })
+
+      if (!alreadyCompleted) {
+        questBonus = dailyChallenge.xpBonus
+        await this.prisma.userDailyChallenge.create({
+          data: { userId, challengeId: dailyChallenge.id }
+        })
+      }
+    }
+
+    // Total XP yang didapat user
+    const totalXpEarned = baseXpEarned + comboBonus + questBonus
 
     await this.prisma.userProgress.update({
       where: { userId_lessonId: { userId, lessonId } },
       data: {
         status: 'COMPLETED',
         score,
-        xpEarned,
+        xpEarned: totalXpEarned,
         completedAt: new Date(),
         bestScore: score > progress.bestScore ? score : progress.bestScore
       }
     })
 
-    // Award XP
+    // Award XP ke User
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: { xp: { increment: xpEarned } }
+      data: { xp: { increment: totalXpEarned } }
     })
 
-    // Log XP
+    // Log XP Base
     await this.prisma.xPLog.create({
       data: {
         userId,
-        amount: xpEarned,
+        amount: baseXpEarned,
         source: score === 100 ? 'PERFECT_SCORE' : 'LESSON_COMPLETE',
         metadata: { lessonId, score }
       }
     })
+
+    // Log XP Combo (jika ada)
+    if (comboBonus > 0) {
+      await this.prisma.xPLog.create({
+        data: { userId, amount: comboBonus, source: 'COMBO_BONUS', metadata: { maxCombo } }
+      })
+    }
+
+    // Log XP Quest (jika ada)
+    if (questBonus > 0 && dailyChallenge) {
+      await this.prisma.xPLog.create({
+        data: { userId, amount: questBonus, source: 'DAILY_CHALLENGE', metadata: { challengeId: dailyChallenge.id } }
+      })
+    }
 
     // Calculate new level
     const newLevel = this.calculateLevel(updatedUser.xp)
@@ -124,18 +171,20 @@ export class ProgressService {
     // Update streak
     await this.updateStreak(userId)
 
-    // Check achievements (async, non-blocking)
+    // Check achievements
     const finalUser = await this.prisma.user.findUnique({ where: { id: userId } })
     setImmediate(() => this.checkAchievements(userId, finalUser!))
 
     return {
       score,
-      xpEarned,
+      xpEarned: totalXpEarned, // Berikan total XP ke frontend
       correctAnswers,
       totalQuestions,
       isPerfect: score === 100,
       newLevel: newLevel > updatedUser.level ? newLevel : null,
-      leveledUp: newLevel > updatedUser.level
+      leveledUp: newLevel > updatedUser.level,
+      comboBonus,
+      questBonus
     }
   }
 

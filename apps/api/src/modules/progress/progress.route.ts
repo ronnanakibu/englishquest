@@ -61,10 +61,21 @@ const progressRoutes: FastifyPluginAsync = async (fastify) => {
   }, async (request, reply) => {
     const user = request.user as { id: string }
     const { id } = request.params as { id: string }
-    const { progressId } = request.body as { progressId: string }
+    
+    // FIX: Tambahkan maxCombo di sini
+    const { progressId, maxCombo } = request.body as { 
+      progressId: string
+      maxCombo?: number 
+    }
 
     try {
-      const result = await progressService.completeLesson(user.id, id, progressId)
+      // FIX: Lempar maxCombo ke progressService
+      const result = await progressService.completeLesson(
+        user.id, 
+        id, 
+        progressId, 
+        maxCombo || 0
+      )
       return reply.send(result)
     } catch (err) {
       if (err instanceof AppError) {
@@ -74,5 +85,4 @@ const progressRoutes: FastifyPluginAsync = async (fastify) => {
     }
   })
 }
-
 export default progressRoutes

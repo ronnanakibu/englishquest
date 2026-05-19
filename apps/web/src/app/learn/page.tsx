@@ -79,6 +79,12 @@ export default function LearnPage() {
   const { user, logout, isHydrated, refreshUser } = useAuthStore()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [dailyQuest, setDailyQuest] = useState<{
+  lessonId: string;
+  lessonTitle: string;
+  xpBonus: number;
+  isCompleted: boolean;
+  } | null>(null);
 
     // Deklarasi fetchLessons DULU
     const fetchLessons = async () => {
@@ -100,11 +106,24 @@ export default function LearnPage() {
     }, [user, isHydrated])
 
     useEffect(() => {
+      fetchDailyQuest()
+    }, [])
+
+    useEffect(() => {
       if (!isHydrated || !user) return
 
       const handleLessonComplete = async () => {
         await refreshUser()
         await fetchLessons()
+      }
+
+      const fetchDailyQuest = async () => {
+        try {
+          const res = await api.get('/api/v1/quests/today')
+          setDailyQuest(res.data)
+        } catch (err) {
+          console.error('Gagal mengambil misi harian:', err)
+        }
       }
 
       window.addEventListener('lesson-complete', handleLessonComplete)
