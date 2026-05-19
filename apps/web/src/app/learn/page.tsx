@@ -98,6 +98,15 @@ export default function LearnPage() {
       }
     }
 
+    const fetchDailyQuest = async () => {
+      try {
+        const res = await api.get('/api/v1/quests/today')
+        setDailyQuest(res.data)
+      } catch (err) {
+        console.error('Gagal mengambil misi harian:', err)
+      }
+    }
+
     // Baru useEffect
     useEffect(() => {
       if (!isHydrated) return
@@ -106,29 +115,13 @@ export default function LearnPage() {
     }, [user, isHydrated])
 
     useEffect(() => {
-      fetchDailyQuest()
-    }, [])
-
-    useEffect(() => {
       if (!isHydrated || !user) return
-
       const handleLessonComplete = async () => {
         await refreshUser()
         await fetchLessons()
       }
-
-      const fetchDailyQuest = async () => {
-        try {
-          const res = await api.get('/api/v1/quests/today')
-          setDailyQuest(res.data)
-        } catch (err) {
-          console.error('Gagal mengambil misi harian:', err)
-        }
-      }
-
       window.addEventListener('lesson-complete', handleLessonComplete)
       window.addEventListener('focus', handleLessonComplete)
-
       return () => {
         window.removeEventListener('lesson-complete', handleLessonComplete)
         window.removeEventListener('focus', handleLessonComplete)

@@ -42,8 +42,8 @@ app.register(userRoutes, { prefix: '/api/v1/user' })
 app.register(leaderboardRoutes, { prefix: '/api/v1/leaderboard' })
 app.register(achievementRoutes, { prefix: '/api/v1/achievements' })
 app.register(checkinRoutes, { prefix: '/api/v1/checkin' })
-fastify.register(aiRoutes, { prefix: '/api/v1/ai' })
-fastify.register(questRoutes, { prefix: '/api/v1/quests' })
+app.register(aiRoutes, { prefix: '/api/v1/ai' })
+app.register(questRoutes, { prefix: '/api/v1/quests' })
 
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() }
@@ -59,11 +59,17 @@ const start = async () => {
     process.exit(1)
   }
 }
-
 app.setErrorHandler((error, request, reply) => {
   app.log.error(error)
   console.error('UNHANDLED ERROR:', error)
-  reply.status(500).send({ error: error.message })
+  
+  // FIX: Beritahu TypeScript kalau ini memang sebuah Error
+  if (error instanceof Error) {
+    reply.status(500).send({ error: error.message })
+  } else {
+    // Fallback kalau error-nya bukan object Error standar
+    reply.status(500).send({ error: 'Terjadi kesalahan pada server' })
+  }
 })
 
 start()
