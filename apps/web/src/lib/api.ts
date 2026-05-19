@@ -17,12 +17,19 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// apps/web/src/lib/api.ts
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken')
-      window.location.href = '/login'
+      
+      // FIX: Cek apakah user sedang tidak di halaman login
+      // Jika sedang di /login, biarkan saja agar error messagenya muncul di UI
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
