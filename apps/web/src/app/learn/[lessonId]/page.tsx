@@ -905,7 +905,6 @@ const completeLesson = async (pId: string) => {
         achievement={pendingAchievement}
         onClose={() => setPendingAchievement(null)}
       />
-      <BottomNav />
     </main>
   )
 }
