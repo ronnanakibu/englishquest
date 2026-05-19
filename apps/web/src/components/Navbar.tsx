@@ -27,161 +27,195 @@ export default function Navbar({ variant = 'landing', stats, onLogout }: NavbarP
   const themeIcon = theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '🖥️'
 
   return (
-    <nav style={{
-      background: 'var(--bg-card)',
-      borderBottom: '1px solid var(--border)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 50,
-    }}>
-      <div style={{
-        maxWidth: '1100px',
-        margin: '0 auto',
-        padding: '0 24px',
-        height: '60px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    <>
+      {/* Mobile-only styles */}
+      <style>{`
+        @media (max-width: 640px) {
+          .navbar-logout { display: none !important; }
+          .navbar-theme { display: none !important; }
+          .navbar-xp { display: none !important; }
+          .navbar-stat { padding: 4px 7px !important; font-size: 12px !important; }
+          .navbar-stat span:first-child { font-size: 14px !important; }
+          .navbar-brand-text { display: none !important; }
+        }
+      `}</style>
+
+      <nav style={{
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
       }}>
-        {/* Logo */}
-        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '24px' }}>🌍</span>
-          <span style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '18px',
-            color: 'var(--green)',
-            letterSpacing: '-0.5px'
-          }}>EnglishQuest</span>
-        </Link>
-
-        {/* Right side */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          
-          {/* Stats (app mode) */}
-          {variant === 'app' && stats && (
-            <>
-              <StatBadge icon="🔥" value={stats.streak} color="var(--orange)" bg="var(--orange-light)" />
-              <StatBadge icon="⚡" value={`${stats.xp} XP`} color="var(--yellow)" bg="var(--yellow-light)" />
-              <StatBadge icon="❤️" value={stats.hearts} color="var(--red)" bg="var(--red-light)" />
-            </>
-          )}
-
-          {/* Lang toggle */}
-          <button
-            onClick={toggleLang}
-            style={{
-              padding: '6px 10px',
-              borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-subtle)',
-              color: 'var(--text-muted)',
-              fontSize: '12px',
+        <div style={{
+          maxWidth: '1100px',
+          margin: '0 auto',
+          padding: '0 16px',
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+        }}>
+          {/* Logo */}
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span style={{ fontSize: '22px' }}>🌍</span>
+            <span className="navbar-brand-text" style={{
+              fontFamily: 'var(--font-display)',
               fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: 'var(--font-body)',
-              letterSpacing: '0.5px'
-            }}
-          >
-            {lang === 'id' ? 'EN' : 'ID'}
-          </button>
+              fontSize: '17px',
+              color: 'var(--green)',
+              letterSpacing: '-0.5px',
+            }}>EnglishQuest</span>
+          </Link>
 
-          {/* Theme toggle */}
-          <button
-            onClick={cycleTheme}
-            style={{
-              width: '34px',
-              height: '34px',
-              borderRadius: '8px',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-subtle)',
-              fontSize: '16px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {themeIcon}
-          </button>
+          {/* Right side */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
 
-          {/* Landing nav buttons */}
-          {variant === 'landing' && (
-            <>
-              <Link href="/login">
-                <button style={{
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  border: '1.5px solid var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text)',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  {lang === 'id' ? 'Masuk' : 'Log In'}
-                </button>
-              </Link>
-              <Link href="/register">
-                <button style={{
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'var(--green)',
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-body)',
-                  boxShadow: 'var(--shadow-green)',
-                }}>
-                  {lang === 'id' ? 'Mulai' : 'Get Started'}
-                </button>
-              </Link>
-            </>
-          )}
+            {/* Stats (app mode) */}
+            {variant === 'app' && stats && (
+              <>
+                <StatBadge className="navbar-stat" icon="🔥" value={stats.streak} color="var(--orange)" bg="var(--orange-light)" />
+                <StatBadge className="navbar-stat navbar-xp" icon="⚡" value={`${stats.xp} XP`} color="var(--yellow)" bg="var(--yellow-light)" />
+                <StatBadge className="navbar-stat" icon="❤️" value={stats.hearts} color="var(--red)" bg="var(--red-light)" />
+              </>
+            )}
 
-          {/* App logout */}
-          {variant === 'app' && onLogout && (
+            {/* Lang toggle */}
             <button
-              onClick={onLogout}
+              onClick={toggleLang}
               style={{
-                padding: '6px 12px',
+                padding: '5px 9px',
                 borderRadius: '8px',
                 border: '1px solid var(--border)',
-                background: 'transparent',
+                background: 'var(--bg-subtle)',
                 color: 'var(--text-muted)',
+                fontSize: '12px',
                 fontWeight: 700,
-                fontSize: '13px',
                 cursor: 'pointer',
                 fontFamily: 'var(--font-body)',
+                letterSpacing: '0.5px',
+                flexShrink: 0,
               }}
             >
-              {lang === 'id' ? 'Keluar' : 'Log Out'}
+              {lang === 'id' ? 'EN' : 'ID'}
             </button>
-          )}
+
+            {/* Theme toggle — hidden on mobile */}
+            <button
+              className="navbar-theme"
+              onClick={cycleTheme}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--bg-subtle)',
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              {themeIcon}
+            </button>
+
+            {/* Landing nav buttons */}
+            {variant === 'landing' && (
+              <>
+                <Link href="/login">
+                  <button style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text)',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {lang === 'id' ? 'Masuk' : 'Log In'}
+                  </button>
+                </Link>
+                <Link href="/register">
+                  <button style={{
+                    padding: '7px 14px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'var(--green)',
+                    color: 'white',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    boxShadow: 'var(--shadow-green)',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {lang === 'id' ? 'Mulai' : 'Get Started'}
+                  </button>
+                </Link>
+              </>
+            )}
+
+            {/* Logout — hidden on mobile (ada di profile page) */}
+            {variant === 'app' && onLogout && (
+              <button
+                className="navbar-logout"
+                onClick={onLogout}
+                style={{
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-muted)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-body)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                {lang === 'id' ? 'Keluar' : 'Log Out'}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   )
 }
 
-function StatBadge({ icon, value, color, bg }: { icon: string; value: any; color: string; bg: string }) {
+function StatBadge({ icon, value, color, bg, className }: {
+  icon: string
+  value: any
+  color: string
+  bg: string
+  className?: string
+}) {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '4px',
-      padding: '5px 10px',
-      borderRadius: '8px',
-      background: bg,
-      color: color,
-      fontWeight: 800,
-      fontSize: '13px',
-      fontFamily: 'var(--font-display)',
-    }}>
-      <span>{icon}</span>
+    <div
+      className={className}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '5px 9px',
+        borderRadius: '8px',
+        background: bg,
+        color: color,
+        fontWeight: 800,
+        fontSize: '13px',
+        fontFamily: 'var(--font-display)',
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span style={{ fontSize: '15px' }}>{icon}</span>
       <span>{value}</span>
     </div>
   )
