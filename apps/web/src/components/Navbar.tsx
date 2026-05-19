@@ -32,7 +32,6 @@ export default function Navbar({ variant = 'landing', stats, onLogout }: NavbarP
       <style>{`
         @media (max-width: 640px) {
           .navbar-logout { display: none !important; }
-          .navbar-theme { display: none !important; }
           .navbar-xp { display: none !important; }
           .navbar-stat { padding: 4px 7px !important; font-size: 12px !important; }
           .navbar-stat span:first-child { font-size: 14px !important; }
