@@ -56,4 +56,10 @@ const start = async () => {
   }
 }
 
+app.setErrorHandler((error, request, reply) => {
+  app.log.error(error)
+  console.error('UNHANDLED ERROR:', error)
+  reply.status(500).send({ error: error.message })
+})
+
 start()
