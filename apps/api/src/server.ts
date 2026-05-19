@@ -2,7 +2,6 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import jwt from '@fastify/jwt'
 import cors from '@fastify/cors'
-import { config } from 'dotenv'
 import prismaPlugin from './plugins/prisma.plugin'
 import authRoutes from './modules/auth/auth.route'
 import lessonRoutes from './modules/lesson/lesson.route'
@@ -11,8 +10,6 @@ import userRoutes from './modules/user/user.route'
 import leaderboardRoutes from './modules/leaderboard/leaderboard.route'
 import achievementRoutes from './modules/achievements/achievement.route'
 import checkinRoutes from './modules/checkin/checkin.route'
-
-config()
 
 const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
