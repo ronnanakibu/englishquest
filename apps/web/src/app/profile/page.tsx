@@ -287,6 +287,57 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
+       {/* About the Developer Card (Hardcoded) */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          style={{
+            background: 'var(--bg-card)',
+            border: '1.5px solid var(--border)',
+            borderRadius: '20px',
+            padding: '20px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          {/* Foto Profil Developer */}
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: '2px solid var(--border)',
+            flexShrink: 0,
+            background: 'var(--bg-subtle)', // fallback warna kalau gambar belum load
+          }}>
+            <img 
+              src="/rony.jpg" // Pastikan ada file rony.jpg di folder apps/web/public/
+              alt="Rony Imanuel Sihombing" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+          
+          {/* Info Teks */}
+          <div>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '15px',
+              fontWeight: 800,
+              color: 'var(--text)',
+              marginBottom: '4px',
+              letterSpacing: '-0.3px',
+            }}>
+              About the Developer
+            </h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+              EnglishQuest is a gamified learning platform developed by Rony, a Computer Engineering student at Politeknik Negeri Medan, as an innovative final project.
+            </p>
+          </div>
+        </motion.div>
+        
         {/* Logout Button */}
         <motion.button
           onClick={handleLogout}
