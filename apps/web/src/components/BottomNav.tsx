@@ -32,12 +32,14 @@ export default function BottomNav() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '10px 0',
+          paddingTop: '10px',
+          paddingBottom: '6px',
           background: 'transparent',
           border: 'none',
           cursor: 'pointer',
           gap: '3px',
           position: 'relative',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         {active && (
@@ -60,6 +62,7 @@ export default function BottomNav() {
           fontWeight: active ? 800 : 600,
           color: active ? 'var(--green)' : 'var(--text-subtle)',
           fontFamily: 'var(--font-display)',
+          letterSpacing: '0.2px',
         }}>
           {item.label}
         </span>
@@ -71,28 +74,38 @@ export default function BottomNav() {
 
   return (
     <>
-      <div style={{ height: '64px' }} />
+      {/* Spacer — reserve space for fixed bottom nav + safe area */}
+      <div style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))' }} />
 
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50 }}>
-
-        {/* Floating circle center button */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,          // tinggi banget biar tidak tertutup apapun
+        isolation: 'isolate',  // fix stacking context
+      }}>
+        {/* Floating center button */}
         <div style={{
           position: 'absolute',
           top: 0,
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          zIndex: 51,
+          zIndex: 10000,
         }}>
           <motion.button
             onClick={() => router.push('/learn')}
             whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
             style={{
               width: '58px',
               height: '58px',
               borderRadius: '50%',
-              background: centerActive ? '#15803d' : '#22c55e',
-              border: '4px solid var(--bg-card)',
-              boxShadow: '0 4px 18px rgba(34,197,94,0.45)',
+              background: centerActive
+                ? 'linear-gradient(135deg, #15803d, #166534)'
+                : 'linear-gradient(135deg, #22c55e, #16a34a)',
+              border: '3px solid var(--bg-card)',
+              boxShadow: '0 4px 20px rgba(34,197,94,0.5)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -100,6 +113,7 @@ export default function BottomNav() {
               cursor: 'pointer',
               gap: '1px',
               outline: 'none',
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             <span style={{ fontSize: '21px', lineHeight: 1 }}>📚</span>
@@ -108,6 +122,7 @@ export default function BottomNav() {
               fontWeight: 800,
               color: 'white',
               fontFamily: 'var(--font-display)',
+              letterSpacing: '0.3px',
             }}>
               Learn
             </span>
@@ -121,14 +136,13 @@ export default function BottomNav() {
           display: 'flex',
           alignItems: 'stretch',
           height: '64px',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
         }}>
           {leftItems.map(item => <NavItem key={item.path} item={item} />)}
-          {/* Empty center slot */}
           <div style={{ flex: 1 }} />
           {rightItems.map(item => <NavItem key={item.path} item={item} />)}
         </div>
-
       </div>
     </>
   )

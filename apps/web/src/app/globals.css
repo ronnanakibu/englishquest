@@ -1,13 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-
-/* ─── Design Tokens ─── */
+/* ─── Design Tokens (Light Default) ─── */
 :root {
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Nunito', sans-serif;
 
-  /* Colors - Light */
   --bg: #FAFAF8;
   --bg-card: #FFFFFF;
   --bg-subtle: #F4F4F0;
@@ -36,9 +34,9 @@
   --shadow-green: 0 4px 16px rgba(34, 197, 94, 0.25);
 }
 
-/* ─── Dark Mode ─── */
+/* ─── System Dark Mode ─── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0F172A;
     --bg-card: #1E293B;
     --bg-subtle: #162032;
@@ -46,19 +44,20 @@
     --text: #F1F5F9;
     --text-muted: #94A3B8;
     --text-subtle: #64748B;
-
     --green-light: #052e16;
     --green-muted: #14532d;
     --orange-light: #1c0a00;
     --yellow-light: #1c1400;
     --red-light: #1c0202;
     --blue-light: #0c1a33;
-
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
     --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
   }
-  [data-theme="dark"] {
+}
+
+/* ─── Manual Dark Mode ─── */
+[data-theme="dark"] {
   --bg: #0F172A;
   --bg-card: #1E293B;
   --bg-subtle: #162032;
@@ -77,6 +76,7 @@
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 }
 
+/* ─── Manual Light Mode ─── */
 [data-theme="light"] {
   --bg: #FAFAF8;
   --bg-card: #FFFFFF;
@@ -94,7 +94,6 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.10);
-  }
 }
 
 /* ─── Base ─── */

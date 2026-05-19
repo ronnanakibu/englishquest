@@ -11,7 +11,6 @@ import leaderboardRoutes from './modules/leaderboard/leaderboard.route'
 import achievementRoutes from './modules/achievements/achievement.route'
 import checkinRoutes from './modules/checkin/checkin.route'
 
-
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err)
   process.exit(1)
@@ -22,7 +21,6 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-// Load .env hanya di development
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config()
 }
@@ -31,11 +29,7 @@ const app = Fastify({
   logger: process.env.NODE_ENV !== 'production'
 })
 
-app.register(userRoutes, { prefix: '/api/v1/user' })
-app.register(leaderboardRoutes, { prefix: '/api/v1/leaderboard' })
-app.register(achievementRoutes, { prefix: '/api/v1/achievements' })
-app.register(checkinRoutes, { prefix: '/api/v1/checkin' })
-
+// ─── Plugins DULU, sebelum semua routes ───
 app.register(cors, {
   origin: (origin, cb) => {
     if (!origin || origin.endsWith('.railway.app') || origin.includes('localhost')) {
@@ -52,9 +46,14 @@ app.register(jwt, {
   secret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
 })
 
+// ─── Routes SETELAH plugins ───
 app.register(authRoutes, { prefix: '/api/v1/auth' })
 app.register(lessonRoutes, { prefix: '/api/v1/lessons' })
 app.register(progressRoutes, { prefix: '/api/v1/lessons' })
+app.register(userRoutes, { prefix: '/api/v1/user' })
+app.register(leaderboardRoutes, { prefix: '/api/v1/leaderboard' })
+app.register(achievementRoutes, { prefix: '/api/v1/achievements' })
+app.register(checkinRoutes, { prefix: '/api/v1/checkin' })
 
 app.get('/health', async () => {
   return { status: 'ok', timestamp: new Date().toISOString() }
@@ -66,7 +65,7 @@ const start = async () => {
     console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL)
     console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET)
     console.log('NODE_ENV:', process.env.NODE_ENV)
-    
+
     const port = Number(process.env.API_PORT) || 3001
     await app.listen({ port, host: '0.0.0.0' })
     console.log(`🚀 API running at http://localhost:${port}`)

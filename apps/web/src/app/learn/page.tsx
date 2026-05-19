@@ -74,29 +74,47 @@ function groupLessonsIntoUnits(lessons: Lesson[]): Unit[] {
 
 export default function LearnPage() {
   const router = useRouter()
-  const { user, logout } = useAuthStore()
   const { lang } = useLangStore()
+  const [lockedTooltip, setLockedTooltip] = useState<string | null>(null)
+  const { user, logout, isHydrated, refreshUser } = useAuthStore()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [lockedTooltip, setLockedTooltip] = useState<string | null>(null)
-  const isHydrated = useAuthStore(state => state.isHydrated)
 
-  useEffect(() => {
-    if (!isHydrated) return // Tunggu dulu
-    if (!user) { router.push('/login'); return }
-    fetchLessons()
-  }, [user, isHydrated])
-
-  const fetchLessons = async () => {
-    try {
-      const res = await api.get('/api/v1/lessons')
-      setLessons(res.data.lessons)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
+    // Deklarasi fetchLessons DULU
+    const fetchLessons = async () => {
+      try {
+        const res = await api.get('/api/v1/lessons')
+        setLessons(res.data.lessons)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
+
+    // Baru useEffect
+    useEffect(() => {
+      if (!isHydrated) return
+      if (!user) { router.push('/login'); return }
+      fetchLessons()
+    }, [user, isHydrated])
+
+    useEffect(() => {
+      if (!isHydrated || !user) return
+
+      const handleLessonComplete = async () => {
+        await refreshUser()
+        await fetchLessons()
+      }
+
+      window.addEventListener('lesson-complete', handleLessonComplete)
+      window.addEventListener('focus', handleLessonComplete)
+
+      return () => {
+        window.removeEventListener('lesson-complete', handleLessonComplete)
+        window.removeEventListener('focus', handleLessonComplete)
+      }
+    }, [isHydrated, user])
 
   const handleLessonClick = (lesson: Lesson) => {
     if (lesson.isLocked) {
@@ -233,11 +251,12 @@ export default function LearnPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  background: unit.bgColor,
-                  border: `2px solid ${unit.color}30`,
+                  background: 'var(--bg-card)',
+                  border: `2px solid ${unit.color}40`,
                   borderRadius: '16px',
                   padding: '14px 18px',
                   marginBottom: '12px',
+                  boxShadow: 'var(--shadow-sm)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{
@@ -249,14 +268,26 @@ export default function LearnPage() {
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '18px',
+                      flexShrink: 0,
                     }}>
                       {isUnitComplete ? '✅' : unitIndex + 1 <= 3 ? '🌱' : unitIndex + 1 <= 6 ? '⚡' : '🔥'}
                     </div>
                     <div>
-                      <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px' }}>
+                      <h3 style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '15px',
+                        fontWeight: 700,
+                        color: 'var(--text)',
+                        letterSpacing: '-0.2px',
+                      }}>
                         Unit {unitIndex + 1}: {unit.title}
                       </h3>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      <p style={{
+                        fontSize: '12px',
+                        color: 'var(--text-muted)',
+                        fontWeight: 600,
+                        marginTop: '1px',
+                      }}>
                         {unit.difficulty} · {unitCompleted}/{unitTotal} completed
                       </p>
                     </div>
