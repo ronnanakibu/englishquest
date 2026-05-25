@@ -544,7 +544,7 @@ export default function LessonPage() {
           <motion.button
             onClick={() => {
               resetGame()
-              apiCache.clear('lessons')
+              apiCache.clear('lessons', 'quest', 'profile')
               window.dispatchEvent(new Event('lesson-complete'))
               router.push('/learn')
             }}

@@ -9,6 +9,7 @@ import { t } from '@/lib/i18n'
 import Navbar from '@/components/Navbar'
 import api from '@/lib/api'
 import BottomNav from '@/components/BottomNav'
+import { apiCache } from '@/lib/cache'
 
 interface Lesson {
   id: string
@@ -79,54 +80,65 @@ export default function LearnPage() {
   const { user, logout, isHydrated, refreshUser } = useAuthStore()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [quest, setQuest] = useState<any>(null)
   const [dailyQuest, setDailyQuest] = useState<{
-  lessonId: string;
-  lessonTitle: string;
-  xpBonus: number;
-  isCompleted: boolean;
+    lessonId: string;
+    lessonTitle: string;
+    xpBonus: number;
+    isCompleted: boolean;
   } | null>(null);
 
-    // Deklarasi fetchLessons DULU
-    const fetchLessons = async () => {
-      try {
-        const res = await api.get('/api/v1/lessons')
-        setLessons(res.data.lessons)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setIsLoading(false)
-      }
+  // Deklarasi fetchLessons DULU
+  const fetchLessons = async () => {
+    const cached = apiCache.get('lessons')
+    if (cached) { setLessons(cached); setIsLoading(false); return }
+    try {
+      const res = await api.get('/api/v1/lessons')
+      setLessons(res.data.lessons)
+      apiCache.set('lessons', res.data.lessons)
+    } catch (err) { console.error(err) }
+    finally { setIsLoading(false) }
+  }
+
+  const fetchQuest = async () => {
+    const cached = apiCache.get('quest')
+    if (cached) { setQuest(cached); return }
+    try {
+      const res = await api.get('/api/v1/quests/today')
+      setQuest(res.data)
+      apiCache.set('quest', res.data)
+    } catch (err) { console.error(err) }
+  }
+
+  const fetchDailyQuest = async () => {
+    try {
+      const res = await api.get('/api/v1/quests/today')
+      setDailyQuest(res.data)
+    } catch (err) {
+      console.error('Gagal mengambil misi harian:', err)
     }
+  }
 
-    const fetchDailyQuest = async () => {
-      try {
-        const res = await api.get('/api/v1/quests/today')
-        setDailyQuest(res.data)
-      } catch (err) {
-        console.error('Gagal mengambil misi harian:', err)
-      }
+  // Baru useEffect
+  useEffect(() => {
+    if (!isHydrated) return
+    if (!user) { router.push('/login'); return }
+    fetchLessons()
+  }, [user, isHydrated])
+
+  useEffect(() => {
+    if (!isHydrated || !user) return
+    const handleLessonComplete = async () => {
+      await refreshUser()
+      await fetchLessons()
     }
-
-    // Baru useEffect
-    useEffect(() => {
-      if (!isHydrated) return
-      if (!user) { router.push('/login'); return }
-      fetchLessons()
-    }, [user, isHydrated])
-
-    useEffect(() => {
-      if (!isHydrated || !user) return
-      const handleLessonComplete = async () => {
-        await refreshUser()
-        await fetchLessons()
-      }
-      window.addEventListener('lesson-complete', handleLessonComplete)
-      window.addEventListener('focus', handleLessonComplete)
-      return () => {
-        window.removeEventListener('lesson-complete', handleLessonComplete)
-        window.removeEventListener('focus', handleLessonComplete)
-      }
-    }, [isHydrated, user])
+    window.addEventListener('lesson-complete', handleLessonComplete)
+    window.addEventListener('focus', handleLessonComplete)
+    return () => {
+      window.removeEventListener('lesson-complete', handleLessonComplete)
+      window.removeEventListener('focus', handleLessonComplete)
+    }
+  }, [isHydrated, user])
 
   const handleLessonClick = (lesson: Lesson) => {
     if (lesson.isLocked) {
@@ -427,8 +439,8 @@ export default function LearnPage() {
               </motion.div>
             )
           })}
-          </div>
         </div>
+      </div>
       <BottomNav />
     </main>
   )

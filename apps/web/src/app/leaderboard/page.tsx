@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import api from '@/lib/api'
+import { apiCache } from '@/lib/cache'
 
 interface LeaderboardEntry {
   id: string
@@ -43,14 +44,14 @@ export default function LeaderboardPage() {
   }, [user, isHydrated])
 
   const fetchLeaderboard = async () => {
+    const cached = apiCache.get('leaderboard')
+    if (cached) { setData(cached); setIsLoading(false); return }
     try {
       const res = await api.get('/api/v1/leaderboard')
       setData(res.data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
+      apiCache.set('leaderboard', res.data)
+    } catch (err) { console.error(err) }
+    finally { setIsLoading(false) }
   }
 
   if (isLoading) {

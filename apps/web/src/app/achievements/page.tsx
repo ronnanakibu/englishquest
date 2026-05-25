@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Navbar from '@/components/Navbar'
 import api from '@/lib/api'
 import BottomNav from '@/components/BottomNav'
+import { apiCache } from '@/lib/cache'
 
 interface Achievement {
   id: string
@@ -25,6 +26,7 @@ export default function AchievementsPage() {
   const [earned, setEarned] = useState<Achievement[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+
   useEffect(() => {
     if (!isHydrated) return
     if (!user) { router.push('/login'); return }
@@ -32,15 +34,20 @@ export default function AchievementsPage() {
   }, [user, isHydrated])
 
   const fetchAchievements = async () => {
+    const cached = apiCache.get('achievements')
+    if (cached) {
+      setAchievements(cached.all)
+      setEarned(cached.earned)
+      setIsLoading(false)
+      return
+    }
     try {
       const res = await api.get('/api/v1/achievements')
       setAchievements(res.data.all)
       setEarned(res.data.earned)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
+      apiCache.set('achievements', res.data)
+    } catch (err) { console.error(err) }
+    finally { setIsLoading(false) }
   }
 
   const isEarned = (code: string) => earned.some(e => e.code === code)

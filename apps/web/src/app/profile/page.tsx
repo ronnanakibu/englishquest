@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import api from '@/lib/api'
+import { apiCache } from '@/lib/cache'
 
 interface UserProfile {
   id: string
@@ -84,14 +85,14 @@ export default function ProfilePage() {
   }, [authUser, isHydrated])
 
   const fetchProfile = async () => {
+    const cached = apiCache.get('profile')
+    if (cached) { setProfile(cached); setIsLoading(false); return }
     try {
       const res = await api.get('/api/v1/user/me')
       setProfile(res.data.user)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsLoading(false)
-    }
+      apiCache.set('profile', res.data.user)
+    } catch (err) { console.error(err) }
+    finally { setIsLoading(false) }
   }
 
   const handleLogout = async () => {
@@ -287,7 +288,7 @@ export default function ProfilePage() {
           </div>
         </motion.div>
 
-       {/* About the Developer Card (Hardcoded) */}
+        {/* About the Developer Card (Hardcoded) */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -313,13 +314,13 @@ export default function ProfilePage() {
             flexShrink: 0,
             background: 'var(--bg-subtle)', // fallback warna kalau gambar belum load
           }}>
-            <img 
+            <img
               src="/rony.jpg" // Pastikan ada file rony.jpg di folder apps/web/public/
-              alt="Rony Imanuel Sihombing" 
+              alt="Rony Imanuel Sihombing"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
-          
+
           {/* Info Teks */}
           <div>
             <h2 style={{
@@ -337,7 +338,7 @@ export default function ProfilePage() {
             </p>
           </div>
         </motion.div>
-        
+
         {/* Logout Button */}
         <motion.button
           onClick={handleLogout}
