@@ -14,6 +14,7 @@ import AchievementPopup from '@/components/AchievementPopup'
 import LevelUpScreen from '@/components/LevelUpScreen'
 import { sounds } from '@/lib/sounds'
 import BottomNav from '@/components/BottomNav'
+import { apiCache } from '@/lib/cache'
 
 
 
@@ -61,7 +62,7 @@ function RearrangeBlock({ words, onAnswer, disabled, answerState }: {
         gap: '8px',
         alignItems: 'center',
         background: 'var(--bg-subtle)',
-        
+
       }}>
         {selected.length === 0 && (
           <span style={{ color: 'var(--text-subtle)', fontSize: '14px', fontWeight: 600 }}>
@@ -174,7 +175,7 @@ export default function LessonPage() {
   const [showAiModal, setShowAiModal] = useState(false)
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [aiExplanation, setAiExplanation] = useState<string | null>(null)
-  
+
 
   useEffect(() => {
     if (!isHydrated) return
@@ -184,51 +185,51 @@ export default function LessonPage() {
   }, [lessonId, isHydrated])
 
   const initLesson = async () => {
-  try {
-    const lessonRes = await api.get(`/api/v1/lessons/${lessonId}`)
-    const lessonData = lessonRes.data.lesson
+    try {
+      const lessonRes = await api.get(`/api/v1/lessons/${lessonId}`)
+      const lessonData = lessonRes.data.lesson
 
-    // Randomize question order
-    const shuffledQuestions = [...lessonData.questions].sort(() => Math.random() - 0.5)
+      // Randomize question order
+      const shuffledQuestions = [...lessonData.questions].sort(() => Math.random() - 0.5)
 
-    // Randomize options untuk setiap question
-    const questionsWithShuffledOptions = shuffledQuestions.map((q: any) => {
-      if (q.options && q.type !== 'REARRANGE') {
-        const parsed = JSON.parse(q.options)
-        const shuffled = [...parsed].sort(() => Math.random() - 0.5)
-        return { ...q, options: JSON.stringify(shuffled) }
-      }
-      return q
-    })
+      // Randomize options untuk setiap question
+      const questionsWithShuffledOptions = shuffledQuestions.map((q: any) => {
+        if (q.options && q.type !== 'REARRANGE') {
+          const parsed = JSON.parse(q.options)
+          const shuffled = [...parsed].sort(() => Math.random() - 0.5)
+          return { ...q, options: JSON.stringify(shuffled) }
+        }
+        return q
+      })
 
-    setLessonData({ ...lessonData, questions: questionsWithShuffledOptions })
+      setLessonData({ ...lessonData, questions: questionsWithShuffledOptions })
 
-    const startRes = await api.post(`/api/v1/lessons/${lessonId}/start`, {})
-    const pid = startRes.data.progressId
-    setProgressId(pid)
+      const startRes = await api.post(`/api/v1/lessons/${lessonId}/start`, {})
+      const pid = startRes.data.progressId
+      setProgressId(pid)
 
-    setLesson({
-      id: lessonData.id,
-      title: lessonData.title,
-      questions: questionsWithShuffledOptions,
-      progressId: pid
-    })
-    setStartTime(Date.now())
-  } catch (err) {
-    console.error('initLesson error:', err)
-    router.push('/learn')
-  } finally {
-    setIsLoading(false)
+      setLesson({
+        id: lessonData.id,
+        title: lessonData.title,
+        questions: questionsWithShuffledOptions,
+        progressId: pid
+      })
+      setStartTime(Date.now())
+    } catch (err) {
+      console.error('initLesson error:', err)
+      router.push('/learn')
+    } finally {
+      setIsLoading(false)
+    }
   }
-}
 
-const handleAskAi = async () => {
+  const handleAskAi = async () => {
     if (!currentQuestion) return
-    
+
     setShowAiModal(true)
     setIsAiLoading(true)
     setAiExplanation(null)
-    
+
     try {
       const res = await api.post('/api/v1/ai/explain', {
         prompt: currentQuestion.prompt,
@@ -245,50 +246,50 @@ const handleAskAi = async () => {
     }
   }
 
-const completeLesson = async (pId: string) => {
-  try {
-    const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId, maxCombo: maxCombo})
-    setResult(res.data)
- 
-    // Refresh user data dari server
-    await refreshUser()
- 
-    // XP Float
-    setXPFloatAmount(res.data.xpEarned)
-    setShowXPFloat(true)
- 
-    // Confetti
-    if (res.data.isPerfect) {
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#22C55E', '#F59E0B', '#3B82F6', '#EC4899']
-      })
-      sounds.levelUp()
-    }
- 
-    // FIX: Level up screen tampil DULU, baru result screen muncul
-    if (res.data.leveledUp && res.data.newLevel) {
-      setNewLevelNum(res.data.newLevel)
-      setTimeout(() => {
-        setShowLevelUp(true)
+  const completeLesson = async (pId: string) => {
+    try {
+      const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId, maxCombo: maxCombo })
+      setResult(res.data)
+
+      // Refresh user data dari server
+      await refreshUser()
+
+      // XP Float
+      setXPFloatAmount(res.data.xpEarned)
+      setShowXPFloat(true)
+
+      // Confetti
+      if (res.data.isPerfect) {
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#22C55E', '#F59E0B', '#3B82F6', '#EC4899']
+        })
         sounds.levelUp()
-        // Baru set finished setelah level up screen auto-close (3 detik)
+      }
+
+      // FIX: Level up screen tampil DULU, baru result screen muncul
+      if (res.data.leveledUp && res.data.newLevel) {
+        setNewLevelNum(res.data.newLevel)
         setTimeout(() => {
-          setShowLevelUp(false)
-          setIsFinished(true)
-        }, 3200)
-      }, 800)
-    } else {
-      setIsFinished(true)
+          setShowLevelUp(true)
+          sounds.levelUp()
+          // Baru set finished setelah level up screen auto-close (3 detik)
+          setTimeout(() => {
+            setShowLevelUp(false)
+            setIsFinished(true)
+          }, 3200)
+        }, 800)
+      } else {
+        setIsFinished(true)
+      }
+    } catch (err) {
+      resetGame()
+      router.push('/learn')
     }
-  } catch (err) {
-    resetGame()
-    router.push('/learn')
   }
-}
- 
+
 
   const currentQuestion = lesson?.questions[currentQuestionIndex]
   const totalQuestions = lesson?.questions.length || 0
@@ -316,7 +317,7 @@ const completeLesson = async (pId: string) => {
       setExplanation(exp || null)
       setCorrectAnswer(correct || null)
       addAnswer({ questionId: currentQuestion.id, isCorrect, userAnswer: answer })
- 
+
       // Combo logic (di dalam try blok isCorrect)
       if (isCorrect) {
         const newCombo = combo + 1
@@ -331,32 +332,32 @@ const completeLesson = async (pId: string) => {
       } else {
         setCombo(0)
       }
- 
+
       if (isCorrect) {
         // (sounds.correct() already called above)
       } else {
-          sounds.wrong()
-      if (!isCorrect) {
-        const newHearts = currentHearts - 1
-        setCurrentHearts(newHearts)
-        decrementHeart()
-        if (user) setUser({ ...user, hearts: newHearts })
+        sounds.wrong()
+        if (!isCorrect) {
+          const newHearts = currentHearts - 1
+          setCurrentHearts(newHearts)
+          decrementHeart()
+          if (user) setUser({ ...user, hearts: newHearts })
 
-        if (newHearts <= 0) {
-          // Show warning dulu, baru complete
-          setNoHeartsWarning(true)
-          setTimeout(async () => {
-            await completeLesson(progressId)
-          }, 2500)
-          return
+          if (newHearts <= 0) {
+            // Show warning dulu, baru complete
+            setNoHeartsWarning(true)
+            setTimeout(async () => {
+              await completeLesson(progressId)
+            }, 2500)
+            return
+          }
         }
       }
-    }
     } catch (err) {
       console.error(err)
     }
   }
-  
+
 
   const handleNext = async () => {
     setSelectedAnswer(null)
@@ -541,7 +542,12 @@ const completeLesson = async (pId: string) => {
           </motion.div>
 
           <motion.button
-            onClick={() => { resetGame(); router.push('/learn') }}
+            onClick={() => {
+              resetGame()
+              apiCache.clear('lessons')
+              window.dispatchEvent(new Event('lesson-complete'))
+              router.push('/learn')
+            }}
             style={{
               width: '100%',
               padding: '14px',
@@ -628,7 +634,7 @@ const completeLesson = async (pId: string) => {
             {currentHearts}
           </span>
         </div>
- 
+
         {/* Combo badge — muncul kalau combo >= 2 */}
         <AnimatePresence>
           {combo >= 2 && (
@@ -700,7 +706,7 @@ const completeLesson = async (pId: string) => {
                 {currentQuestion.prompt}
               </h2>
 
-{/* Multiple Choice, Fill Blank, Translate, Error Detect */}
+              {/* Multiple Choice, Fill Blank, Translate, Error Detect */}
               {currentQuestion.options && currentQuestion.type !== 'REARRANGE' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(JSON.parse(currentQuestion.options as any) as string[]).map((option, i) => {
@@ -815,7 +821,7 @@ const completeLesson = async (pId: string) => {
                 </div>
               )}
 
-                    {/* Feedback bar */}
+              {/* Feedback bar */}
               <AnimatePresence>
                 {answerState !== 'idle' && !noHeartsWarning && (
                   <motion.div
@@ -880,13 +886,13 @@ const completeLesson = async (pId: string) => {
           )}
         </AnimatePresence>
       </div>
-            {/* Reward overlays */}
+      {/* Reward overlays */}
       <XPFloat
         amount={xpFloatAmount}
         show={showXPFloat}
         onComplete={() => setShowXPFloat(false)}
       />
- 
+
       {/* Combo popup */}
       <AnimatePresence>
         {showComboPopup && (
@@ -1000,7 +1006,7 @@ const completeLesson = async (pId: string) => {
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 800, color: '#A855F7', marginBottom: '16px' }}>
                 AI Tutor
               </h2>
-              
+
               <div style={{ minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isAiLoading ? (
                   <motion.div
