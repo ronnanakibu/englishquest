@@ -279,15 +279,32 @@ export default function DeveloperCard() {
                                         📬 Kontak
                                     </div>
                                     {[
-                                        { icon: '📧', label: 'Email', value: DEVELOPER.email },
-                                        { icon: '📸', label: 'Instagram', value: DEVELOPER.instagram },
-                                        { icon: '🐙', label: 'GitHub', value: `github.com/${DEVELOPER.github}` },
-                                    ].map(({ icon, label, value }) => (
-                                        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        { icon: '📧', label: 'Email', value: DEVELOPER.email, url: `mailto:${DEVELOPER.email}` },
+                                        { icon: '📸', label: 'Instagram', value: DEVELOPER.instagram, url: `https://instagram.com/${DEVELOPER.instagram.replace('@', '')}` },
+                                        { icon: '🐙', label: 'GitHub', value: `github.com/${DEVELOPER.github}`, url: `https://github.com/${DEVELOPER.github}` },
+                                        { icon: '🔗', label: 'Link To This Project Repo', value: 'https://github.com/ronnanakibu/englishquest', url: 'https://github.com/ronnanakibu/englishquest' }
+                                    ].map(({ icon, label, value, url }) => (
+                                        <a
+                                            key={label}
+                                            href={url}
+                                            target={label === 'Email' ? '_self' : '_blank'}
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                marginBottom: '8px',
+                                                textDecoration: 'none',
+                                                cursor: 'pointer',
+                                                transition: 'opacity 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                                            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                                        >
                                             <span style={{ fontSize: '14px' }}>{icon}</span>
                                             <span style={{ fontSize: '12px', color: 'var(--text-subtle)', fontWeight: 600, width: '70px' }}>{label}</span>
                                             <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 700 }}>{value}</span>
-                                        </div>
+                                        </a>
                                     ))}
                                 </div>
 
