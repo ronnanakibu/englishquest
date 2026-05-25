@@ -20,7 +20,7 @@ const app = Fastify({
 // ✅ PLUGINS DULU — sebelum semua route
 app.register(cors, {
   origin: (origin, cb) => {
-    if (!origin || origin.endsWith('.railway.app') || origin.includes('localhost')) {
+    if (!origin || origin.endsWith('.railway.app') || origin.includes('localhost') || origin.includes('vercel.app')) {
       cb(null, true)
     } else {
       cb(new Error('Not allowed by CORS'), false)
