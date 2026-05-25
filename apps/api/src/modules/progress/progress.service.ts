@@ -2,11 +2,27 @@ import { PrismaClient } from '@prisma/client'
 import { AppError } from '../../shared/errors/AppError'
 import { ProgressRepository } from './progress.repository'
 
+// Kamus metadata lencana lokal untuk memastikan tampilan emoji & teks deskripsi super solid di frontend
+const ACHIEVEMENT_MAPPER: Record<string, { emoji: string; title: string; desc: string }> = {
+  FIRST_LESSON: { emoji: '🦉', title: 'First Milestone', desc: 'Selesaikan unit kuis pertama kamu!' },
+  LESSON_5: { emoji: '📜', title: 'Knowledge Seeker', desc: 'Selesaikan 5 unit kuis bahasa Inggris!' },
+  LESSON_10: { emoji: '📚', title: 'Diligent Scholar', desc: 'Selesaikan 10 unit kuis bahasa Inggris!' },
+  LESSON_20: { emoji: '🧠', title: 'Polyglot Mastery', desc: 'Selesaikan 20 unit kuis bahasa Inggris!' },
+  STREAK_3: { emoji: '⚡', title: 'Getting Warm', desc: 'Pertahankan konsistensi streak belajar selama 3 hari!' },
+  STREAK_7: { emoji: '🔥', title: 'Unstoppable Streak', desc: 'Pertahankan konsistensi streak belajar selama 7 hari!' },
+  STREAK_30: { emoji: '👑', title: 'English Overlord', desc: 'Pertahankan konsistensi streak belajar selama 30 hari!' },
+  PERFECT_SCORE: { emoji: '💯', title: 'Flawless Victory', desc: 'Raih akurasi skor sempurna 100% pada kelas kuis!' },
+  PERFECT_5: { emoji: '🎯', title: 'Sniper Precision', desc: 'Sukses meraih 5 kali skor sempurna 100%!' },
+  XP_100: { emoji: '⭐', title: 'Bronze Learner', desc: 'Kumpulkan akumulasi tabungan hingga 100 XP!' },
+  XP_500: { emoji: '🔮', title: 'Silver Learner', desc: 'Kumpulkan akumulasi tabungan hingga 500 XP!' },
+  XP_1000: { emoji: '💎', title: 'Gold Titan', desc: 'Kumpulkan akumulasi tabungan hingga 1000 XP!' },
+}
+
 export class ProgressService {
   constructor(
     private progressRepo: ProgressRepository,
     private prisma: PrismaClient
-  ) {}
+  ) { }
 
   async startLesson(userId: string, lessonId: string) {
     const lesson = await this.prisma.lesson.findFirst({
@@ -56,6 +72,22 @@ export class ProgressService {
       timeSpent: data.timeSpent || 0
     })
 
+    try {
+      if (isCorrect) {
+        await this.prisma.userMistake.deleteMany({
+          where: { userId: data.userId, questionId: data.questionId }
+        })
+      } else {
+        await this.prisma.userMistake.upsert({
+          where: { userId_questionId: { userId: data.userId, questionId: data.questionId } },
+          create: { userId: data.userId, questionId: data.questionId },
+          update: {}
+        })
+      }
+    } catch (mistakeErr) {
+      console.error('Gagal memproses mutasi UserMistake di Service:', mistakeErr)
+    }
+
     return {
       isCorrect,
       correctAnswer: isCorrect ? undefined : question.correctAnswer,
@@ -78,30 +110,20 @@ export class ProgressService {
 
     const totalQuestions = answers.length
     const correctAnswers = answers.filter(a => a.isCorrect).length
-    const score = totalQuestions > 0
-      ? Math.round((correctAnswers / totalQuestions) * 100)
-      : 0
+    const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
 
-    // 1. Base XP
     let baseXpEarned = lesson.xpReward
     if (score === 100) baseXpEarned = Math.round(lesson.xpReward * 1.5)
 
-    // 2. Kalkulasi Combo Bonus
     let comboBonus = 0
     if (maxCombo >= 5) comboBonus = 15
     else if (maxCombo >= 3) comboBonus = 5
 
-    // 3. Kalkulasi Daily Quest Bonus
     let questBonus = 0
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Cek apakah ada misi harian untuk lesson ini hari ini
     const dailyChallenge = await this.prisma.dailyChallenge.findFirst({
-      where: { date: today, lessonId: lessonId }
+      where: { type: 'COMPLETE_LESSON' }
     })
 
-    // Syarat lulus misi: skor minimal 70
     if (dailyChallenge && score >= 70) {
       const alreadyCompleted = await this.prisma.userDailyChallenge.findUnique({
         where: { userId_challengeId: { userId, challengeId: dailyChallenge.id } }
@@ -115,7 +137,6 @@ export class ProgressService {
       }
     }
 
-    // Total XP yang didapat user
     const totalXpEarned = baseXpEarned + comboBonus + questBonus
 
     await this.prisma.userProgress.update({
@@ -129,13 +150,11 @@ export class ProgressService {
       }
     })
 
-    // Award XP ke User
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: { xp: { increment: totalXpEarned } }
     })
 
-    // Log XP Base
     await this.prisma.xPLog.create({
       data: {
         userId,
@@ -145,21 +164,18 @@ export class ProgressService {
       }
     })
 
-    // Log XP Combo (jika ada)
     if (comboBonus > 0) {
       await this.prisma.xPLog.create({
         data: { userId, amount: comboBonus, source: 'COMBO_BONUS', metadata: { maxCombo } }
       })
     }
 
-    // Log XP Quest (jika ada)
     if (questBonus > 0 && dailyChallenge) {
       await this.prisma.xPLog.create({
         data: { userId, amount: questBonus, source: 'DAILY_CHALLENGE', metadata: { challengeId: dailyChallenge.id } }
       })
     }
 
-    // Calculate new level
     const newLevel = this.calculateLevel(updatedUser.xp)
     if (newLevel > updatedUser.level) {
       await this.prisma.user.update({
@@ -168,34 +184,36 @@ export class ProgressService {
       })
     }
 
-    // Update streak
     await this.updateStreak(userId)
 
-    // Check achievements
     const finalUser = await this.prisma.user.findUnique({ where: { id: userId } })
-    setImmediate(() => this.checkAchievements(userId, finalUser!))
+
+    // ✅ FIX REALTIME: Kita ganti dari async background 'setImmediate' ke await langsung biar datanya masuk payload response
+    const newAchievements = await this.checkAchievements(userId, finalUser!)
 
     return {
+      success: true,
       score,
-      xpEarned: totalXpEarned, // Berikan total XP ke frontend
+      xpEarned: totalXpEarned,
       correctAnswers,
       totalQuestions,
       isPerfect: score === 100,
       newLevel: newLevel > updatedUser.level ? newLevel : null,
       leveledUp: newLevel > updatedUser.level,
       comboBonus,
-      questBonus
+      questBonus,
+      newAchievements // 🔥 Orbitkan array lencana baru ke router controller
     }
   }
 
   private calculateLevel(xp: number): number {
-  let level = 1
-  while (level < 100) {
-    const xpNeeded = Math.floor(100 * Math.pow(level + 1, 2))
-    if (xp < xpNeeded) break
-    level++
-  }
-  return level
+    let level = 1
+    while (level < 100) {
+      const xpNeeded = Math.floor(100 * Math.pow(level + 1, 2))
+      if (xp < xpNeeded) break
+      level++
+    }
+    return level
   }
 
   private async updateStreak(userId: string) {
@@ -228,7 +246,8 @@ export class ProgressService {
     })
   }
 
-  private async checkAchievements(userId: string, user: any) {
+  private async checkAchievements(userId: string, user: any): Promise<any[]> {
+    const newlyUnlocked: any[] = []
     try {
       const completedCount = await this.prisma.userProgress.count({
         where: { userId, status: 'COMPLETED' }
@@ -272,11 +291,22 @@ export class ProgressService {
               where: { id: userId },
               data: { xp: { increment: achievement.xpReward } }
             })
+
+            // Ambil visual kosmetik lencana dari mapper lokal
+            const visual = ACHIEVEMENT_MAPPER[check.code] || { emoji: '🏆', title: check.code, desc: 'Pencapaian Baru!' }
+            newlyUnlocked.push({
+              code: check.code,
+              title: visual.title,
+              description: visual.desc,
+              emoji: visual.emoji,
+              xpReward: achievement.xpReward
+            })
           }
         }
       }
     } catch (err) {
       console.error('Achievement check error:', err)
     }
+    return newlyUnlocked // Balikkan list medali baru yang lolos kualifikasi
   }
 }

@@ -2,21 +2,22 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import ReactMarkdown from 'react-markdown' // IMPOR PARSER MARKDOWN
 
 // ─── EDIT DATA DIRI LO DI SINI ───
 const DEVELOPER = {
     name: 'Rony Imanuel Sihombing',
     nickname: 'Ronn',
-    nim: '2505112097', // ← isi NIM lo
-    prodi: 'Teknik Komputer',
-    jurusan: 'Teknik Komputer dan Informatika',
+    nim: '2505112097',
+    prodi: 'Teknik Komputer (Computer Engineering)',
+    jurusan: 'Teknik Komputer dan Informatika (Computer Engineering and Informatika)',
     kampus: 'Politeknik Negeri Medan (Medan State Polytechnic)',
     semester: '2',
     tahunMasuk: '2025',
     email: 'ronysihombing07@gmail.com',
     instagram: '@ronnlbtrn_',
     github: 'https://github.com/ronnanakibu',
-    role: 'Fullstack Developer & UI Designer',
+    role: 'Student that dreaming to be a Fullstack Developer & UI Designer',
     bio: 'Mahasiswa Teknik Komputer Polmed yang passionate di bidang software engineering, UI/UX design, dan multimedia. EnglishQuest dibangun sebagai final project semester 2 dengan fokus pada gamifikasi (DuoLingo like) pembelajaran bahasa Inggris.',
     techStack: ['Next.js 15', 'Fastify', 'Prisma', 'MySQL', 'Framer Motion', 'TypeScript', 'Railway', 'Gemini AI'],
     avatar: '/rony.jpg', // ← taruh foto di apps/web/public/rony.jpg
@@ -142,6 +143,7 @@ export default function DeveloperCard() {
                                 borderRadius: '24px 24px 0 0',
                                 overflow: 'auto',
                                 paddingBottom: '32px',
+                                scrollBehavior: 'smooth' // FIX: Membuat efek geser scroll lancar saat versi di-klik
                             }}
                         >
                             {/* Handle */}
@@ -338,22 +340,37 @@ export default function DeveloperCard() {
                                     )}
 
                                     {releases.map((release, i) => (
-                                        <div key={i} style={{
-                                            borderLeft: '2px solid #6366F1',
-                                            paddingLeft: '12px',
-                                            marginBottom: '16px',
-                                        }}>
+                                        <div
+                                            key={i}
+                                            id={`release-${release.tag_name}`} // PERBAIKAN: Memberi ID jangkar unik pada setiap blok versi rilis
+                                            style={{
+                                                borderLeft: '2px solid #6366F1',
+                                                paddingLeft: '12px',
+                                                marginBottom: '16px',
+                                            }}
+                                        >
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                <span style={{
-                                                    fontSize: '11px',
-                                                    fontWeight: 800,
-                                                    color: '#6366F1',
-                                                    background: '#EEF2FF',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '6px',
-                                                }}>
-                                                    {release.tag_name}
-                                                </span>
+
+                                                {/* PERBAIKAN: Menambahkan elemen Anchor link & animasi hover pada tag versi */}
+                                                <a href={`#release-${release.tag_name}`} style={{ textDecoration: 'none' }}>
+                                                    <motion.span
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        style={{
+                                                            fontSize: '11px',
+                                                            fontWeight: 800,
+                                                            color: '#6366F1',
+                                                            background: '#EEF2FF',
+                                                            padding: '2px 8px',
+                                                            borderRadius: '6px',
+                                                            display: 'inline-block',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        {release.tag_name}
+                                                    </motion.span>
+                                                </a>
+
                                                 <span style={{ fontSize: '11px', color: 'var(--text-subtle)' }}>
                                                     {new Date(release.published_at).toLocaleDateString('id-ID', {
                                                         day: 'numeric', month: 'long', year: 'numeric'
@@ -363,9 +380,11 @@ export default function DeveloperCard() {
                                             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>
                                                 {release.name || release.tag_name}
                                             </div>
+
                                             {release.body && (
-                                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                                                    {release.body.slice(0, 300)}{release.body.length > 300 ? '...' : ''}
+                                                // PERBAIKAN: Mengganti render teks mentah biasa dengan parser <ReactMarkdown> komplit
+                                                <div className="prose dark:prose-invert max-w-none text-xs text-muted leading-relaxed">
+                                                    <ReactMarkdown>{release.body}</ReactMarkdown>
                                                 </div>
                                             )}
                                         </div>

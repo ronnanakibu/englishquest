@@ -16,8 +16,6 @@ import { sounds } from '@/lib/sounds'
 import BottomNav from '@/components/BottomNav'
 import { apiCache } from '@/lib/cache'
 
-
-
 interface Question {
   id: string
   type: string
@@ -36,6 +34,7 @@ function RearrangeBlock({ words, onAnswer, disabled, answerState }: {
 }) {
   const [available, setAvailable] = useState<string[]>([...words].sort(() => Math.random() - 0.5))
   const [selected, setSelected] = useState<string[]>([])
+
 
   const addWord = (word: string, index: number) => {
     if (disabled) return
@@ -62,7 +61,6 @@ function RearrangeBlock({ words, onAnswer, disabled, answerState }: {
         gap: '8px',
         alignItems: 'center',
         background: 'var(--bg-subtle)',
-
       }}>
         {selected.length === 0 && (
           <span style={{ color: 'var(--text-subtle)', fontSize: '14px', fontWeight: 600 }}>
@@ -175,7 +173,12 @@ export default function LessonPage() {
   const [showAiModal, setShowAiModal] = useState(false)
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [aiExplanation, setAiExplanation] = useState<string | null>(null)
+  // State pengontrol antrean pop-up mendali pencapaian
+  const [unlockedBadges, setUnlockedBadges] = useState<any[]>([])
+  const [badgeIndex, setBadgeIndex] = useState(0)
 
+  // State baru untuk menampung bonus misi harian di screen tamat
+  const [questClaimedBonus, setQuestClaimedBonus] = useState<number | null>(null)
 
   useEffect(() => {
     if (!isHydrated) return
@@ -233,7 +236,6 @@ export default function LessonPage() {
     try {
       const res = await api.post('/api/v1/ai/explain', {
         prompt: currentQuestion.prompt,
-        // Jika sedang salah, kirim jawaban user. Jika belum dijawab, kirim null untuk minta hint.
         userAnswer: answerState === 'wrong' ? selectedAnswer : null,
         correctAnswer: correctAnswer || null
       })
@@ -248,8 +250,14 @@ export default function LessonPage() {
 
   const completeLesson = async (pId: string) => {
     try {
-      const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId, maxCombo: maxCombo })
+      const res = await api.post(`/api/v1/lessons/${lessonId}/complete`, { progressId: pId, maxCombo })
       setResult(res.data)
+
+      // 🔥 CEK APALAH USER BERHAK DAPAT LENCANA BARU
+      if (res.data.newAchievements && res.data.newAchievements.length > 0) {
+        setUnlockedBadges(res.data.newAchievements)
+        setBadgeIndex(0) // Reset antrean indeks dari nol
+      }
 
       // Refresh user data dari server
       await refreshUser()
@@ -258,7 +266,7 @@ export default function LessonPage() {
       setXPFloatAmount(res.data.xpEarned)
       setShowXPFloat(true)
 
-      // Confetti
+      // Confetti Utama
       if (res.data.isPerfect) {
         confetti({
           particleCount: 150,
@@ -267,6 +275,27 @@ export default function LessonPage() {
           colors: ['#22C55E', '#F59E0B', '#3B82F6', '#EC4899']
         })
         sounds.levelUp()
+      }
+
+      // 🎯 SUNTIKKAN: CEK DAN AUTO-KLAIM DAILY QUEST DI SINI
+      try {
+        const { data: todayQuest } = await api.get("/api/v1/quests/today")
+        // Jika lesson kuis ini cocok dengan target Daily Quest hari ini dan statusnya belum beres
+        if (todayQuest && todayQuest.lessonId === lessonId && !todayQuest.isCompleted) {
+          console.log("Misi harian cocok dengan lesson saat ini! Melakukan auto-claim...");
+          const { data: claimResponse } = await api.post("/api/v1/quests/claim", {
+            challengeId: todayQuest.id
+          })
+
+          if (claimResponse.success) {
+            setQuestClaimedBonus(claimResponse.xpBonus)
+            // Tambah letupan konfeti sayap kanan-kiri untuk selebrasi misi harian
+            confetti({ particleCount: 40, angle: 60, spread: 55, origin: { x: 0, y: 0.6 } })
+            confetti({ particleCount: 40, angle: 120, spread: 55, origin: { x: 1, y: 0.6 } })
+          }
+        }
+      } catch (questErr) {
+        console.error('Gagal memproses klaim otomatis misi harian:', questErr)
       }
 
       // FIX: Level up screen tampil DULU, baru result screen muncul
@@ -285,11 +314,11 @@ export default function LessonPage() {
         setIsFinished(true)
       }
     } catch (err) {
+      console.error("Waduh, Gagal Cik", err)
       resetGame()
       router.push('/learn')
     }
   }
-
 
   const currentQuestion = lesson?.questions[currentQuestionIndex]
   const totalQuestions = lesson?.questions.length || 0
@@ -318,11 +347,11 @@ export default function LessonPage() {
       setCorrectAnswer(correct || null)
       addAnswer({ questionId: currentQuestion.id, isCorrect, userAnswer: answer })
 
-      // Combo logic (di dalam try blok isCorrect)
+      // Combo logic
       if (isCorrect) {
         const newCombo = combo + 1
         setCombo(newCombo)
-        if (newCombo > maxCombo) setMaxCombo(newCombo) // <--- UPDATE MAX COMBO
+        if (newCombo > maxCombo) setMaxCombo(newCombo)
 
         if (newCombo >= 3) {
           setShowComboPopup(true)
@@ -334,30 +363,26 @@ export default function LessonPage() {
       }
 
       if (isCorrect) {
-        // (sounds.correct() already called above)
+        // Correct sound played above
       } else {
         sounds.wrong()
-        if (!isCorrect) {
-          const newHearts = currentHearts - 1
-          setCurrentHearts(newHearts)
-          decrementHeart()
-          if (user) setUser({ ...user, hearts: newHearts })
+        const newHearts = currentHearts - 1
+        setCurrentHearts(newHearts)
+        decrementHeart()
+        if (user) setUser({ ...user, hearts: newHearts })
 
-          if (newHearts <= 0) {
-            // Show warning dulu, baru complete
-            setNoHeartsWarning(true)
-            setTimeout(async () => {
-              await completeLesson(progressId)
-            }, 2500)
-            return
-          }
+        if (newHearts <= 0) {
+          setNoHeartsWarning(true)
+          setTimeout(async () => {
+            await completeLesson(progressId)
+          }, 2500)
+          return
         }
       }
     } catch (err) {
       console.error(err)
     }
   }
-
 
   const handleNext = async () => {
     setSelectedAnswer(null)
@@ -487,6 +512,28 @@ export default function LessonPage() {
             {result.correctAnswers} {lang === 'id' ? 'dari' : 'of'} {result.totalQuestions} {t(lang, 'correctAnswers')}
           </p>
 
+          {/* 🎯 NOTIFIKASI EMAS KLAIM DAILY QUEST DI LAYAR TAMAT JIKA ADA */}
+          {questClaimedBonus && (
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                color: 'white',
+                borderRadius: '16px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                fontWeight: 700,
+                fontSize: '14px',
+                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)',
+                fontFamily: 'var(--font-display)'
+              }}
+            >
+              🎯 Daily Quest Completed! <br />
+              <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.9 }}>+{questClaimedBonus} Bonus XP Claimed</span>
+            </motion.div>
+          )}
+
           {/* Score */}
           <div style={{
             background: 'var(--bg-subtle)',
@@ -540,6 +587,36 @@ export default function LessonPage() {
               </div>
             )}
           </motion.div>
+
+          {/* 🧠 JIKA TIDAK PERFECT (ADA ERROR), MUNCULKAN TOMBOL REVIEW INI */}
+          {!result.isPerfect && (
+            <motion.button
+              onClick={() => {
+                resetGame()
+                apiCache.clear('lessons', 'quest', 'profile')
+                window.dispatchEvent(new Event('lesson-complete'))
+                // Direct langsung ke profil sambil bawa query parameter tab mistakes
+                router.push('/profile?tab=mistakes')
+              }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: '2px solid var(--red)',
+                background: 'var(--red-light)',
+                color: 'var(--red)',
+                fontWeight: 800,
+                fontSize: '15px',
+                fontFamily: 'var(--font-display)',
+                marginBottom: '12px', // Kasih jarak dengan tombol bawahnya
+                cursor: 'pointer',
+                letterSpacing: '-0.2px'
+              }}
+            >
+              🧠 Check & Fix Your Mistakes
+            </motion.button>
+          )}
 
           <motion.button
             onClick={() => {
@@ -635,7 +712,7 @@ export default function LessonPage() {
           </span>
         </div>
 
-        {/* Combo badge — muncul kalau combo >= 2 */}
+        {/* Combo badge */}
         <AnimatePresence>
           {combo >= 2 && (
             <motion.div
@@ -694,17 +771,54 @@ export default function LessonPage() {
                 {t(lang, 'question')} {currentQuestionIndex + 1} {t(lang, 'of')} {totalQuestions}
               </p>
 
-              <h2 style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '22px',
-                fontWeight: 700,
-                color: 'var(--text)',
-                lineHeight: 1.4,
-                marginBottom: '32px',
-                letterSpacing: '-0.3px',
-              }}>
-                {currentQuestion.prompt}
-              </h2>
+              {/* ── 🔊 SUNTIKKAN DISINI: HEADER PERTANYAAN + TOMBOL AUDIO TEXT-TO-SPEECH AMERICAN ACCENT ── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  color: 'var(--text)',
+                  lineHeight: 1.4,
+                  margin: 0,
+                  letterSpacing: '-0.3px',
+                  textAlign: 'left',
+                  flex: 1
+                }}>
+                  {currentQuestion.prompt}
+                </h2>
+                <motion.button
+                  whileHover={{ scale: 1.1, backgroundColor: 'var(--border)' }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    // Proteksi & eksekusi fitur Web Speech API bawaan browser asli
+                    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                      window.speechSynthesis.cancel(); // Reset audio antrean paralel agar tidak tabrakan
+                      const utterance = new SpeechSynthesisUtterance(currentQuestion.prompt);
+                      utterance.lang = 'en-US'; // Setel pengucapan Native US Accent
+                      utterance.rate = 0.9;     // Sedikit diperlambat agar terdengar jelas untuk mahasiswa belajar
+                      window.speechSynthesis.speak(utterance);
+                    }
+                  }}
+                  style={{
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    boxShadow: 'var(--shadow-sm)',
+                    transition: 'all 0.15s'
+                  }}
+                  title="Listen to pronunciation"
+                >
+                  🔊
+                </motion.button>
+              </div>
 
               {/* Multiple Choice, Fill Blank, Translate, Error Detect */}
               {currentQuestion.options && currentQuestion.type !== 'REARRANGE' && (
@@ -758,7 +872,7 @@ export default function LessonPage() {
                 </div>
               )}
 
-              {/* REARRANGE — drag words to form sentence */}
+              {/* REARRANGE */}
               {currentQuestion.type === 'REARRANGE' && currentQuestion.options && (
                 <RearrangeBlock
                   words={JSON.parse(currentQuestion.options as any) as string[]}
@@ -886,6 +1000,7 @@ export default function LessonPage() {
           )}
         </AnimatePresence>
       </div>
+
       {/* Reward overlays */}
       <XPFloat
         amount={xpFloatAmount}
@@ -922,7 +1037,7 @@ export default function LessonPage() {
               fontFamily: 'var(--font-display)',
               fontWeight: 800,
               fontSize: '15px',
-              color: combo >= 5 ? '#D97706' : 'var(--green-dark)',
+              color: combo >= 5 ? '#D97706' : 'var(--text-muted)'
             }}>
               {combo >= 5 ? `${combo}x COMBO!` : combo >= 3 ? `${combo} in a row!` : ''}
             </span>
@@ -940,7 +1055,8 @@ export default function LessonPage() {
         achievement={pendingAchievement}
         onClose={() => setPendingAchievement(null)}
       />
-      {/* 💡 FLOATING AI BUTTON */}
+
+      {/* FLOATING AI BUTTON */}
       {!isFinished && !noHeartsWarning && (
         <motion.button
           onClick={handleAskAi}
@@ -948,12 +1064,12 @@ export default function LessonPage() {
           whileTap={{ scale: 0.9 }}
           style={{
             position: 'fixed',
-            bottom: answerState !== 'idle' ? '100px' : '30px', // Naik sedikit kalau feedback bar (hijau/merah) muncul
+            bottom: answerState !== 'idle' ? '100px' : '30px',
             right: '24px',
             width: '56px',
             height: '56px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #A855F7, #7E22CE)', // Warna ungu khas AI
+            background: 'linear-gradient(135deg, #A855F7, #7E22CE)',
             color: 'white',
             border: 'none',
             boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
@@ -969,7 +1085,7 @@ export default function LessonPage() {
         </motion.button>
       )}
 
-      {/* 🤖 MODAL AI TUTOR */}
+      {/* MODAL AI TUTOR */}
       <AnimatePresence>
         {showAiModal && (
           <motion.div
@@ -1041,6 +1157,75 @@ export default function LessonPage() {
                 }}
               >
                 Tutup
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── 🏆 MODAL ANIMASI POP-UP NEW ACHIEVEMENT UNLOCKED ─── */}
+      <AnimatePresence>
+        {unlockedBadges.length > 0 && badgeIndex < unlockedBadges.length && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.85)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 9999, padding: '24px', backdropFilter: 'blur(8px)'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: -20, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              style={{
+                background: 'var(--bg-card, #1E293B)', border: '2px solid #F59E0B',
+                borderRadius: '28px', padding: '40px 24px', width: '100%', maxWidth: '420px',
+                textAlign: 'center', boxShadow: '0 20px 50px rgba(245, 158, 11, 0.25)'
+              }}
+            >
+              {/* Animasi Partikel Emas Melayang */}
+              <motion.div
+                animate={{ scale: [1, 1.15, 1], rotate: [0, 5, -5, 0] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                style={{ fontSize: '72px', marginBottom: '16px', display: 'inline-block' }}
+              >
+                {unlockedBadges[badgeIndex].emoji}
+              </motion.div>
+
+              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#F59E0B', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 8px 0' }}>
+                Achievement Unlocked!
+              </h2>
+
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 800, color: 'var(--text, #FFF)', margin: '0 0 12px 0', letterSpacing: '-0.5px' }}>
+                {unlockedBadges[badgeIndex].title}
+              </h1>
+
+              <p style={{ fontSize: '14px', color: 'var(--text-muted, #94A3B8)', margin: '0 0 24px 0', lineHeight: 1.5 }}>
+                {unlockedBadges[badgeIndex].description}
+              </p>
+
+              {/* Notifikasi Hadiah Bonus XP */}
+              <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px dashed #F59E0B', padding: '10px', borderRadius: '12px', marginBottom: '28px', color: '#F59E0B', fontSize: '13px', fontWeight: 700 }}>
+                🎁 Bonus Reward: +{unlockedBadges[badgeIndex].xpReward} XP Granted!
+              </div>
+
+              {/* Tombol Klaim Lencana */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setBadgeIndex(prev => prev + 1)} // Naikkan indeks untuk mengecek lencana berikutnya jika ada
+                style={{
+                  width: '100%', padding: '14px', background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                  color: 'white', border: 'none', borderRadius: '14px', fontSize: '15px',
+                  fontWeight: 800, fontFamily: 'var(--font-display)', cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)'
+                }}
+              >
+                Awesome, Claim! ⚡
               </motion.button>
             </motion.div>
           </motion.div>

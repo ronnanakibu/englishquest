@@ -15,9 +15,12 @@ enum Role {
 enum LessonCategory {
   VOCABULARY
   GRAMMAR
-  LISTENING
-  READING
-  SPEAKING
+  LESSON         // Foundation & Vocabulary
+  WRITING        // Sentence Building & Composition
+  LISTENING      // Audio & Dictation Exercises
+  READING        // Text & Comprehension Passages
+  SPEAKING       // Dialog & Pronunciation
+  COMPREHENSIVE  // All-in-One Comprehensive Skills Test
 }
 
 enum Difficulty {
@@ -85,13 +88,14 @@ model User {
   streakLogs      StreakLog[]
   dailyChallenges UserDailyChallenge[]
   vocabProgress   VocabProgress[]
+  mistakes UserMistake[]
 
   @@index([xp])
   @@index([level])
 }
 
 model Lesson {
-  id          String         @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
   description String         @db.Text
   category    LessonCategory
@@ -107,7 +111,6 @@ model Lesson {
 
   questions   Question[]
   progress    UserProgress[]
-  challenges  DailyChallenge[]
 
   @@index([difficulty, isPublished])
   @@index([unlockLevel])
@@ -128,6 +131,7 @@ model Question {
 
   lesson        Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   answers       UserAnswer[]
+  mistakes      UserMistake[]
 
   @@index([lessonId])
 }
@@ -218,13 +222,13 @@ model UserAchievement {
 }
 
 model DailyChallenge {
-  id       String   @id @default(cuid())
-  date     DateTime @db.Date
-  lessonId String
-  xpBonus  Int      @default(50)
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  type        String   @default("COMPLETE_LESSONS") // Jenis tantangan
+  targetCount Int      @default(2)                 // Target jumlah kelas kelar
+  xpBonus     Int      @default(50)
 
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  users    UserDailyChallenge[]
+  users       UserDailyChallenge[]
 
   @@unique([date])
   @@index([date])
@@ -256,6 +260,7 @@ model VocabProgress {
 
   @@unique([userId, word])
   @@index([userId, nextReview])
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model LeaderboardCache {
@@ -270,4 +275,24 @@ model LeaderboardCache {
 
   @@unique([userId, period])
   @@index([period, xp])
+}
+
+model UserMistake {
+  id         String   @id @default(cuid())
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+
+  // Relasi ke model User dan Question
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  // ─── ATURAN FISIKA DATABASE (COMPUTER ENGINEERING MINDSET) ───
+  // 1. Anti-Duplikasi: Satu user cuma boleh mencatat 1 baris untuk 1 soal yang sama.
+  //    Kalau dia salah berkali-kali di soal yang sama, tidak akan bikin database bengkak.
+  @@unique([userId, questionId])
+
+  // 2. Performa: Indexing wajib pada userId karena kita bakal sering melakukan query 
+  //    "Cari semua daftar kesalahan milik User X" pas dia buka halaman My Mistakes.
+  @@index([userId])
 }

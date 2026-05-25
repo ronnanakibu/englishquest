@@ -10,6 +10,7 @@ import Navbar from '@/components/Navbar'
 import api from '@/lib/api'
 import BottomNav from '@/components/BottomNav'
 import { apiCache } from '@/lib/cache'
+import DailyQuestCard from "@/components/DailyQuestCard"
 
 interface Lesson {
   id: string
@@ -80,15 +81,8 @@ export default function LearnPage() {
   const { user, logout, isHydrated, refreshUser } = useAuthStore()
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [quest, setQuest] = useState<any>(null)
-  const [dailyQuest, setDailyQuest] = useState<{
-    lessonId: string;
-    lessonTitle: string;
-    xpBonus: number;
-    isCompleted: boolean;
-  } | null>(null);
 
-  // Deklarasi fetchLessons DULU
+  // Ambil data daftar materi kuis
   const fetchLessons = async () => {
     const cached = apiCache.get('lessons')
     if (cached) { setLessons(cached); setIsLoading(false); return }
@@ -100,32 +94,14 @@ export default function LearnPage() {
     finally { setIsLoading(false) }
   }
 
-  const fetchQuest = async () => {
-    const cached = apiCache.get('quest')
-    if (cached) { setQuest(cached); return }
-    try {
-      const res = await api.get('/api/v1/quests/today')
-      setQuest(res.data)
-      apiCache.set('quest', res.data)
-    } catch (err) { console.error(err) }
-  }
-
-  const fetchDailyQuest = async () => {
-    try {
-      const res = await api.get('/api/v1/quests/today')
-      setDailyQuest(res.data)
-    } catch (err) {
-      console.error('Gagal mengambil misi harian:', err)
-    }
-  }
-
-  // Baru useEffect
+  // Monitor status autentikasi user
   useEffect(() => {
     if (!isHydrated) return
     if (!user) { router.push('/login'); return }
     fetchLessons()
   }, [user, isHydrated])
 
+  // Sinkronisasi data saat user menyelesaikan kuis
   useEffect(() => {
     if (!isHydrated || !user) return
     const handleLessonComplete = async () => {
@@ -205,6 +181,9 @@ export default function LearnPage() {
       )}
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '32px 24px' }}>
+
+        {/* 🎯 KARTU MISI HARIAN SEKARANG BERDIRI TEGAP DI SINI */}
+        <DailyQuestCard />
 
         {/* Welcome + XP Card */}
         <motion.div
@@ -433,7 +412,7 @@ export default function LearnPage() {
                           )}
                         </div>
                       </motion.div>
-                    )
+                    );
                   })}
                 </div>
               </motion.div>
