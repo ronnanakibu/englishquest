@@ -281,7 +281,7 @@ export default function DeveloperCard() {
                                     {[
                                         { icon: '📧', label: 'Email', value: DEVELOPER.email, url: `mailto:${DEVELOPER.email}` },
                                         { icon: '📸', label: 'Instagram', value: DEVELOPER.instagram, url: `https://instagram.com/${DEVELOPER.instagram.replace('@', '')}` },
-                                        { icon: '🐙', label: 'GitHub', value: `github.com/${DEVELOPER.github}`, url: `https://github.com/${DEVELOPER.github}` },
+                                        { icon: '🐙', label: 'GitHub', value: `${DEVELOPER.github}`, url: `${DEVELOPER.github}` },
                                         { icon: '🔗', label: 'Link To This Project Repo', value: 'https://github.com/ronnanakibu/englishquest', url: 'https://github.com/ronnanakibu/englishquest' }
                                     ].map(({ icon, label, value, url }) => (
                                         <a
