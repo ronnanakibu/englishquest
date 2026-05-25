@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar'
 import BottomNav from '@/components/BottomNav'
 import api from '@/lib/api'
 import { apiCache } from '@/lib/cache'
+import DeveloperCard from './developer'
 
 interface UserProfile {
   id: string
@@ -338,6 +339,9 @@ export default function ProfilePage() {
             </p>
           </div>
         </motion.div>
+
+        {/* Developer Card Trigger */}
+        <DeveloperCard />
 
         {/* Logout Button */}
         <motion.button
