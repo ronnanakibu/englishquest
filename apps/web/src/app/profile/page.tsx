@@ -351,7 +351,7 @@ function ProfileContent() {
 // Membungkus komponen utama dengan Suspense demi keamanan Next.js useSearchParams
 export default function ProfilePage() {
   return (
-    <main style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '80px' }}>
+    <main style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '150px' }}>
       <Suspense fallback={<div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-subtle)' }}>⏳ Loading Profile Component...</div>}>
         <ProfileContent />
       </Suspense>

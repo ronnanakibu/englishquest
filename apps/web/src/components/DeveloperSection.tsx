@@ -33,6 +33,33 @@ export default function DeveloperSection() {
                 position: 'relative',
                 zIndex: 1
             }}>
+
+            {/* ─── 📱 INJEKSI MEDIA QUERY NATIVE (ANTI HYDRATION BUG) ─── */}
+            <style>{`
+                .eq-creator-grid {
+                    display: grid;
+                    grid-template-columns: 1fr; /* Default HP: 1 Kolom Tumpuk */
+                    gap: 40px;
+                    align-items: start;
+                }
+                .eq-academic-subgrid {
+                    display: grid;
+                    grid-template-columns: 1fr; /* Default HP: Detail akademik tumpuk biar ga sempit */
+                    gap: 16px;
+                }
+                
+                /* Tampilan Desktop / Tablet Lebar */
+                @media (min-width: 768px) {
+                    .eq-creator-grid {
+                        grid-template-columns: 1fr 1.5fr; /* Laptop kembali ke rasio ideal Ronn */
+                    }
+                    .eq-academic-subgrid {
+                        grid-template-columns: 1fr 1fr; /* Detail akademik jadi 2 kolom sejajar */
+                        gap: 12px 24px;
+                    }
+                }
+            `}</style>
+
             <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
                 {/* Judul Section Utama */}
@@ -64,19 +91,13 @@ export default function DeveloperSection() {
                     </p>
                 </div>
 
-                {/* Grid Layout 2 Kolom Komplit */}
-                <div style={{
-                    display: 'grid',
-                    // FIX: Perbaikan kode pengkondisian width browser yang aman dari TypeScript error & SSR
-                    gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth < 768 ? '1fr' : '1fr 1.5fr',
-                    gap: '40px',
-                    alignItems: 'start'
-                }}>
+                {/* Grid Layout Utama dengan Class Hook Responsif */}
+                <div className="eq-creator-grid">
 
                     {/* KOLOM KIRI: Profil Utama & Kontak */}
                     <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         style={{
                             background: 'var(--bg)',
@@ -121,7 +142,7 @@ export default function DeveloperSection() {
                         <div style={{ height: '1px', background: 'var(--border)', margin: '16px 0' }} />
 
                         {/* Social Media Link Grid */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
                             {[
                                 { icon: '📧', label: 'Email', value: DEVELOPER.email, url: `mailto:${DEVELOPER.email}` },
                                 { icon: '📸', label: 'Instagram', value: DEVELOPER.instagram, url: `https://instagram.com/${DEVELOPER.instagram.replace('@', '')}` },
@@ -132,12 +153,12 @@ export default function DeveloperSection() {
                                     href={url}
                                     target={label === 'Email' ? '_self' : '_blank'}
                                     rel="noopener noreferrer"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', cursor: 'pointer' }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', cursor: 'pointer' }}
                                 >
-                                    <span style={{ fontSize: '16px' }}>{icon}</span>
+                                    <span style={{ fontSize: '18px' }}>{icon}</span>
                                     <div>
                                         <div style={{ fontSize: '10px', color: 'var(--text-subtle)', fontWeight: 700, letterSpacing: '0.3px' }}>{label.toUpperCase()}</div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 600 }}>{value}</div>
+                                        <div style={{ fontSize: '13px', color: 'var(--text)', ...((label === 'GitHub Profile' || label === 'Email') && { wordBreak: 'break-all' }), fontWeight: 600 }}>{value}</div>
                                     </div>
                                 </a>
                             ))}
@@ -146,8 +167,8 @@ export default function DeveloperSection() {
 
                     {/* KOLOM KANAN: Bio, Akademik, Tech Stack */}
                     <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
                     >
@@ -166,7 +187,9 @@ export default function DeveloperSection() {
                             <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '14px', color: 'var(--text)', marginBottom: '14px' }}>
                                 🎓 Identitas Akademik Polmed
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
+
+                            {/* Menggunakan Class Hook Subgrid Responsif */}
+                            <div className="eq-academic-subgrid">
                                 {[
                                     { label: 'NIM', value: DEVELOPER.nim },
                                     { label: 'Semester / Angkatan', value: `${DEVELOPER.semester} / ${DEVELOPER.tahunMasuk}` },
@@ -175,7 +198,7 @@ export default function DeveloperSection() {
                                 ].map(({ label, value }) => (
                                     <div key={label}>
                                         <div style={{ fontSize: '11px', color: 'var(--text-subtle)', fontWeight: 700 }}>{label}</div>
-                                        <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 700, marginTop: '2px' }}>{value}</div>
+                                        <div style={{ fontSize: '13px', color: 'var(--text)', fontWeight: 700, marginTop: '2px', lineHeight: 1.4 }}>{value}</div>
                                     </div>
                                 ))}
                             </div>

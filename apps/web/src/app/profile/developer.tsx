@@ -234,7 +234,7 @@ export default function DeveloperCard() {
                                         { label: 'Semester', value: DEVELOPER.semester },
                                         { label: 'Tahun Masuk', value: DEVELOPER.tahunMasuk },
                                     ].map(({ label, value }) => (
-                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
                                             <span style={{ fontSize: '12px', color: 'var(--text-subtle)', fontWeight: 600 }}>{label}</span>
                                             <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 700 }}>{value}</span>
                                         </div>
